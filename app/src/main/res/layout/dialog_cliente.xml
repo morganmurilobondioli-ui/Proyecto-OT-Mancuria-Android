@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- Tipo de cliente -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tipo de cliente"
+        android:textSize="13sp"
+        android:textColor="#6B6B6B"
+        android:layout_marginBottom="6dp"/>
+
+    <RadioGroup
+        android:id="@+id/rgTipoCliente"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="14dp">
+
+        <RadioButton
+            android:id="@+id/rbPersona"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Persona"
+            android:checked="true"
+            android:buttonTint="#db2d2c"/>
+
+        <RadioButton
+            android:id="@+id/rbEmpresa"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Empresa"
+            android:buttonTint="#db2d2c"/>
+    </RadioGroup>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/InputRojo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="DNI / RUC *"
+        android:layout_marginBottom="12dp">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etDocumentoCliente"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#1C1B1F"
+            android:inputType="number"
+            android:maxLength="11"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/InputRojo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Nombre completo / Razón social *"
+        android:layout_marginBottom="12dp">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etNombreCliente"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#1C1B1F"
+            android:inputType="textPersonName|textCapWords"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/InputRojo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Teléfono / WhatsApp"
+        android:layout_marginBottom="12dp"
+        app:startIconDrawable="@android:drawable/ic_menu_call"
+        app:startIconTint="#db2d2c">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etTelefonoCliente"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#1C1B1F"
+            android:inputType="phone"
+            android:maxLength="9"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/InputRojo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Correo electrónico (opcional)"
+        app:startIconDrawable="@android:drawable/ic_dialog_email"
+        app:startIconTint="#db2d2c">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etCorreoCliente"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#1C1B1F"
+            android:inputType="textEmailAddress"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+</LinearLayout>

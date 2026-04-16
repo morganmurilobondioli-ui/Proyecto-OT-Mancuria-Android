@@ -1,0 +1,8 @@
+<resources>
+    <style name="Base.Theme.Mancuria" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/rojo_mancuria</item>
+        <item name="colorPrimaryDark">@color/rojo_oscuro</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+</resources>

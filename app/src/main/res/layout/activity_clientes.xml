@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/fondo_app">
+
+    <!-- Toolbar roja -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/rojo_mancuria"
+        app:title="Clientes"
+        app:titleTextColor="#FFFFFF"
+        app:navigationIcon="@drawable/ic_back"
+        app:navigationIconTint="#FFFFFF"/>
+
+    <!-- Buscador dinámico de clientes -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layoutBuscador"
+        style="@style/InputRojo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="14dp"
+        android:hint="Buscar por nombre o documento..."
+        app:startIconDrawable="@android:drawable/ic_menu_search"
+        app:startIconTint="@color/rojo_mancuria">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etBuscadorClientes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:textColor="@color/texto_principal"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvClientes"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingHorizontal="14dp"
+            android:paddingBottom="14dp"
+            android:clipToPadding="false"/>
+
+        <!-- FAB Agregar cliente -->
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/fabNuevoCliente"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="20dp"
+            android:text="Nuevo Cliente"
+            android:textAllCaps="false"
+            app:backgroundTint="@color/rojo_mancuria"
+            app:tint="#FFFFFF"
+            app:icon="@android:drawable/ic_input_add"/>
+
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+</LinearLayout>

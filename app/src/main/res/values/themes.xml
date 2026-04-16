@@ -1,0 +1,45 @@
+<resources>
+    <style name="Base.Theme.Mancuria" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/rojo_mancuria</item>
+        <item name="colorPrimaryDark">@color/rojo_oscuro</item>
+        <item name="colorAccent">@color/rojo_mancuria</item>
+        <item name="android:windowBackground">@color/fondo_app</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+
+        <!-- Hace que la barra de estado sea transparente para que el contenido use Safe Areas -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@color/rojo_mancuria</item>
+    </style>
+    <style name="Theme.Mancuria" parent="Base.Theme.Mancuria"/>
+
+    <!-- Campos con borde rojo, texto negro visible siempre -->
+    <style name="InputRojo" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">@color/rojo_mancuria</item>
+        <item name="hintTextColor">@color/rojo_mancuria</item>
+        <item name="android:textColorHint">@color/texto_secundario</item>
+        <item name="boxCornerRadiusTopStart">10dp</item>
+        <item name="boxCornerRadiusTopEnd">10dp</item>
+        <item name="boxCornerRadiusBottomStart">10dp</item>
+        <item name="boxCornerRadiusBottomEnd">10dp</item>
+    </style>
+
+    <!-- Dropdown Material con borde rojo -->
+    <style name="DropdownRojo" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        <item name="boxStrokeColor">@color/rojo_mancuria</item>
+        <item name="hintTextColor">@color/rojo_mancuria</item>
+        <item name="android:textColorHint">@color/texto_secundario</item>
+        <item name="boxCornerRadiusTopStart">10dp</item>
+        <item name="boxCornerRadiusTopEnd">10dp</item>
+        <item name="boxCornerRadiusBottomStart">10dp</item>
+        <item name="boxCornerRadiusBottomEnd">10dp</item>
+    </style>
+
+    <!-- Toolbar rojo -->
+    <style name="ToolbarRojo" parent="Widget.MaterialComponents.Toolbar">
+        <item name="android:background">@color/rojo_mancuria</item>
+        <item name="titleTextColor">@color/white</item>
+        <item name="navigationIconTint">@color/white</item>
+    </style>
+</resources>

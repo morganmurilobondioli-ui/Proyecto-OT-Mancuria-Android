@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="rojo_mancuria">#db2d2c</color>
+    <color name="rojo_oscuro">#b71c1c</color>
+    <color name="rojo_fondo">#FFF5F5</color>
+    <color name="fondo_app">#F2F3F5</color>
+    <color name="fondo_card">#FFFFFF</color>
+    <color name="texto_principal">#1C1B1F</color>
+    <color name="texto_secundario">#6B6B6B</color>
+    <color name="badge_pendiente">#E53935</color>
+    <color name="badge_proceso">#F57C00</color>
+    <color name="badge_listo">#2E7D32</color>
+    <color name="badge_entregado">#757575</color>
+    <color name="divider">#E8E8E8</color>
+</resources>

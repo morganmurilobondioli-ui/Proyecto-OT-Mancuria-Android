@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "24914455876",
+    "project_id": "mancuria-automotriz",
+    "storage_bucket": "mancuria-automotriz.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:24914455876:android:7663054ee6ba745dd23b11",
+        "android_client_info": {
+          "package_name": "com.company.appMancuria"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "24914455876-48c0rpjogvhpl0ttg5ro3ie33hufmo5m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.company.appMancuria",
+            "certificate_hash": "ea10023619a11919f82e6218f5db644869931b50"
+          }
+        },
+        {
+          "client_id": "24914455876-emmvkeut9jgrqgaq8q3abcbnrvrqu0ij.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBGEdQ4Eqa50FDk47Qug8uNpB9RVeRzYQs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "24914455876-emmvkeut9jgrqgaq8q3abcbnrvrqu0ij.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

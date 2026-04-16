@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Mancuria Gear</string>
+    <string name="inicia_sesi_n_para_continuar">Inicia sesión para continuar</string>
+    <string name="default_web_client_id" />
+</resources>
