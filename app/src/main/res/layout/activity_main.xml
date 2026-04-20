@@ -63,6 +63,18 @@
                     android:ellipsize="end"/>
             </LinearLayout>
 
+            <!-- Botón Admin (Invisible por defecto) -->
+            <ImageButton
+                android:id="@+id/btnAdminPanel"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_manage"
+                android:tint="#FFFFFF"
+                android:visibility="gone"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="Panel Admin" />
+
             <!-- Botón Clientes -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnClientes"

@@ -25,6 +25,7 @@
         <activity android:name=".ClientesActivity"      android:exported="false" android:windowSoftInputMode="adjustResize"/>
         <activity android:name=".NuevaOrdenActivity"    android:exported="false" android:windowSoftInputMode="adjustResize"/>
         <activity android:name=".DetalleOrdenActivity"  android:exported="false" android:windowSoftInputMode="adjustResize"/>
+        <activity android:name=".AdminPanelActivity"    android:exported="false" android:windowSoftInputMode="adjustResize"/>
 
     </application>
 </manifest>

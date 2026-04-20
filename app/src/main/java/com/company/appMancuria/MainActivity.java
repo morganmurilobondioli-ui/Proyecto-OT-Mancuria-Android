@@ -5,7 +5,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -23,6 +25,7 @@ import com.bumptech.glide.Glide;
 import com.company.appMancuria.adapters.OrdenAdapter;
 import com.company.appMancuria.models.LoginActivity;
 import com.company.appMancuria.models.OrdenTrabajo;
+import com.company.appMancuria.utils.CodigosManager;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.material.button.MaterialButton;
@@ -34,7 +37,6 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -43,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     private OrdenAdapter adapter;
     private List<OrdenTrabajo> listaCompleta = new ArrayList<>();
     private String userRol = "mecanico";
+    private ImageButton btnAdminPanel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,7 +53,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Aplicar insets para evitar que choque con la barra de estado y de navegación
         View mainView = findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -59,12 +61,12 @@ public class MainActivity extends AppCompatActivity {
         });
 
         db = FirebaseFirestore.getInstance();
+        btnAdminPanel = findViewById(R.id.btnAdminPanel);
 
         setupTopBar();
         setupRecyclerView();
         setupBuscador();
         obtenerRolUsuario();
-        consultarOrdenes();
 
         // Botón Nueva Orden
         findViewById(R.id.btnNuevaOrden).setOnClickListener(v ->
@@ -73,6 +75,10 @@ public class MainActivity extends AppCompatActivity {
         // Botón Clientes
         ((MaterialButton) findViewById(R.id.btnClientes)).setOnClickListener(v ->
                 startActivity(new Intent(this, ClientesActivity.class)));
+
+        // Botón Admin Panel
+        btnAdminPanel.setOnClickListener(v ->
+                startActivity(new Intent(this, AdminPanelActivity.class)));
     }
 
     private void setupTopBar() {
@@ -160,9 +166,77 @@ public class MainActivity extends AppCompatActivity {
         db.collection("usuarios").document(user.getUid()).get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
-                        String r = doc.getString("rol");
-                        userRol = r != null ? r : "mecanico";
+                        userRol = doc.getString("rol");
+                        if (userRol == null) userRol = "mecanico";
+
+                        String estado = doc.getString("estado");
+                        if ("suspendido".equals(estado)) {
+                            mostrarBloqueoSuspension();
+                            return;
+                        }
+                        
+                        if (userRol.equals("mecanico")) {
+                            btnAdminPanel.setVisibility(View.GONE);
+                            verificarCodigoSemanal();
+                        } else {
+                            // Si es admin, muestra botón y carga directo
+                            btnAdminPanel.setVisibility(View.VISIBLE);
+                            consultarOrdenes();
+                            Toast.makeText(this, "Modo Administrador Activo", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 });
+    }
+
+    private void mostrarBloqueoSuspension() {
+        new AlertDialog.Builder(this)
+                .setTitle("Cuenta Suspendida")
+                .setMessage("Tu acceso ha sido revocado por el administrador. Contacta con soporte.")
+                .setCancelable(false)
+                .setPositiveButton("Cerrar Sesión", (d, w) -> {
+                    FirebaseAuth.getInstance().signOut();
+                    finish();
+                }).show();
+    }
+
+    private void verificarCodigoSemanal() {
+        if (CodigosManager.yaAccedioEstaSemana(this)) {
+            consultarOrdenes();
+            return;
+        }
+
+        // Mostrar diálogo de bloqueo para código
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_codigo_acceso, null);
+        EditText etCodigo = dialogView.findViewById(R.id.etCodigoAcceso);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Acceso Semanal")
+                .setMessage("Ingresa el código proporcionado por el Administrador")
+                .setView(dialogView)
+                .setCancelable(false)
+                .setPositiveButton("Acceder", null)
+                .setNegativeButton("Cerrar Sesión", (d, w) -> {
+                    FirebaseAuth.getInstance().signOut();
+                    finish();
+                })
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String ingresado = etCodigo.getText().toString().trim();
+                db.collection("configuracion").document("codigo_acceso").get()
+                        .addOnSuccessListener(doc -> {
+                            String codigoCorrecto = doc.getString("codigo");
+                            if (ingresado.equals(codigoCorrecto)) {
+                                CodigosManager.guardarAccesoExitoso(this);
+                                consultarOrdenes();
+                                dialog.dismiss();
+                            } else {
+                                etCodigo.setError("Código incorrecto");
+                            }
+                        });
+            });
+        });
+        dialog.show();
     }
 }
