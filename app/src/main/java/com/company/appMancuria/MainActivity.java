@@ -1,13 +1,13 @@
 package com.company.appMancuria;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -25,13 +25,11 @@ import com.bumptech.glide.Glide;
 import com.company.appMancuria.adapters.OrdenAdapter;
 import com.company.appMancuria.models.LoginActivity;
 import com.company.appMancuria.models.OrdenTrabajo;
-import com.company.appMancuria.utils.CodigosManager;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -46,12 +44,21 @@ public class MainActivity extends AppCompatActivity {
     private List<OrdenTrabajo> listaCompleta = new ArrayList<>();
     private String userRol = "mecanico";
     private ImageButton btnAdminPanel;
+    private String currentUserId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
+        currentUserId = prefs.getString("userId", null);
+
+        if (currentUserId == null) {
+            irALogin();
+            return;
+        }
 
         View mainView = findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
@@ -86,29 +93,42 @@ public class MainActivity extends AppCompatActivity {
         TextView tvName   = findViewById(R.id.tvUserName);
         ImageButton btnLogout = findViewById(R.id.btnLogout);
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null) {
-            tvName.setText(user.getDisplayName() != null ? user.getDisplayName() : "Usuario");
-            if (user.getPhotoUrl() != null) {
-                Glide.with(this).load(user.getPhotoUrl()).circleCrop()
-                        .placeholder(R.mipmap.ic_launcher_round).into(ivPhoto);
-            }
-        }
+        SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
+        String nombre = prefs.getString("userNombre", "Usuario");
+        tvName.setText(nombre);
+        
+        // La foto ahora es opcional o estática si no viene de Google
+        Glide.with(this).load(R.mipmap.ic_launcher_round).circleCrop().into(ivPhoto);
 
         btnLogout.setOnClickListener(v ->
             new AlertDialog.Builder(this)
                 .setTitle("Cerrar sesión")
                 .setMessage("¿Deseas salir de Mancuria?")
                 .setPositiveButton("Salir", (d, w) -> {
-                    FirebaseAuth.getInstance().signOut();
-                    GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut();
-                    Intent i = new Intent(this, LoginActivity.class);
-                    i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(i);
-                    finish();
+                    cerrarSesion();
                 })
                 .setNegativeButton("Cancelar", null).show()
         );
+    }
+
+    private void cerrarSesion() {
+        // Limpiar SharedPreferences
+        getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE).edit().clear().apply();
+        
+        // Limpiar Firebase Auth
+        FirebaseAuth.getInstance().signOut();
+        
+        // Google Sign Out por si acaso sigue vinculado
+        GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut();
+        
+        irALogin();
+    }
+
+    private void irALogin() {
+        Intent i = new Intent(this, LoginActivity.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(i);
+        finish();
     }
 
     private void setupRecyclerView() {
@@ -161,9 +181,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void obtenerRolUsuario() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) return;
-        db.collection("usuarios").document(user.getUid()).get()
+        db.collection("usuarios").document(currentUserId).get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
                         userRol = doc.getString("rol");
@@ -175,15 +193,13 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
                         
-                        if (userRol.equals("mecanico")) {
-                            btnAdminPanel.setVisibility(View.GONE);
-                            verificarCodigoSemanal();
-                        } else {
-                            // Si es admin, muestra botón y carga directo
+                        if (userRol.equals("admin")) {
                             btnAdminPanel.setVisibility(View.VISIBLE);
-                            consultarOrdenes();
-                            Toast.makeText(this, "Modo Administrador Activo", Toast.LENGTH_SHORT).show();
+                        } else {
+                            btnAdminPanel.setVisibility(View.GONE);
                         }
+                        
+                        consultarOrdenes();
                     }
                 });
     }
@@ -191,52 +207,10 @@ public class MainActivity extends AppCompatActivity {
     private void mostrarBloqueoSuspension() {
         new AlertDialog.Builder(this)
                 .setTitle("Cuenta Suspendida")
-                .setMessage("Tu acceso ha sido revocado por el administrador. Contacta con soporte.")
+                .setMessage("Tu acceso ha sido revocado por el administrador.")
                 .setCancelable(false)
-                .setPositiveButton("Cerrar Sesión", (d, w) -> {
-                    FirebaseAuth.getInstance().signOut();
-                    finish();
+                .setPositiveButton("Salir", (d, w) -> {
+                    cerrarSesion();
                 }).show();
-    }
-
-    private void verificarCodigoSemanal() {
-        if (CodigosManager.yaAccedioEstaSemana(this)) {
-            consultarOrdenes();
-            return;
-        }
-
-        // Mostrar diálogo de bloqueo para código
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_codigo_acceso, null);
-        EditText etCodigo = dialogView.findViewById(R.id.etCodigoAcceso);
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Acceso Semanal")
-                .setMessage("Ingresa el código proporcionado por el Administrador")
-                .setView(dialogView)
-                .setCancelable(false)
-                .setPositiveButton("Acceder", null)
-                .setNegativeButton("Cerrar Sesión", (d, w) -> {
-                    FirebaseAuth.getInstance().signOut();
-                    finish();
-                })
-                .create();
-
-        dialog.setOnShowListener(d -> {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-                String ingresado = etCodigo.getText().toString().trim();
-                db.collection("configuracion").document("codigo_acceso").get()
-                        .addOnSuccessListener(doc -> {
-                            String codigoCorrecto = doc.getString("codigo");
-                            if (ingresado.equals(codigoCorrecto)) {
-                                CodigosManager.guardarAccesoExitoso(this);
-                                consultarOrdenes();
-                                dialog.dismiss();
-                            } else {
-                                etCodigo.setError("Código incorrecto");
-                            }
-                        });
-            });
-        });
-        dialog.show();
     }
 }

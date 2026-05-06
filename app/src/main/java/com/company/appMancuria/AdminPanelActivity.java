@@ -1,15 +1,13 @@
 package com.company.appMancuria;
 
 import android.app.AlertDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.ImageButton;
 import android.widget.PopupMenu;
-import android.widget.TextView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -23,7 +21,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.company.appMancuria.adapters.TrabajadorAdapter;
 import com.company.appMancuria.models.Usuario;
-import com.company.appMancuria.utils.CodigosManager;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -34,14 +33,9 @@ public class AdminPanelActivity extends AppCompatActivity {
 
     private static final String TAG = "AdminPanel";
     private FirebaseFirestore db;
-    private TextView tvCodigoActual;
-    private ImageButton btnToggleVisibilidad;
     private RecyclerView rvTrabajadores;
     private TrabajadorAdapter adapter;
     private List<Usuario> listaTrabajadores = new ArrayList<>();
-    
-    private String codigoReal = "";
-    private boolean isCodigoVisible = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +43,7 @@ public class AdminPanelActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_panel);
 
-        View mainView = findViewById(android.R.id.content);
+        View mainView = findViewById(R.id.rootAdminPanel);
         ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -59,16 +53,11 @@ public class AdminPanelActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
 
         setupToolbar();
-        tvCodigoActual = findViewById(R.id.tvCodigoActual);
-        btnToggleVisibilidad = findViewById(R.id.btnToggleVisibilidad);
         rvTrabajadores = findViewById(R.id.rvTrabajadores);
-
-        findViewById(R.id.btnRegenerarCodigo).setOnClickListener(v -> confirmarRegeneracionCodigo());
-        findViewById(R.id.btnCopiarCodigo).setOnClickListener(v -> copiarCodigoAlPortapapeles());
-        btnToggleVisibilidad.setOnClickListener(v -> toggleVisibilidadCodigo());
+        ExtendedFloatingActionButton fab = findViewById(R.id.fabNuevoUsuario);
+        fab.setOnClickListener(v -> mostrarDialogoUsuario(null));
 
         setupRecyclerView();
-        consultarCodigoActual();
         consultarTrabajadores();
     }
 
@@ -87,101 +76,84 @@ public class AdminPanelActivity extends AppCompatActivity {
         rvTrabajadores.setAdapter(adapter);
     }
 
-    private void consultarCodigoActual() {
-        db.collection("configuracion").document("codigo_acceso")
-                .addSnapshotListener((doc, error) -> {
-                    if (error != null) {
-                        Log.e(TAG, "Error leyendo código: " + error.getMessage());
-                        Toast.makeText(this, "Permiso denegado en Firestore", Toast.LENGTH_SHORT).show();
+    private void consultarTrabajadores() {
+        db.collection("usuarios").addSnapshotListener((snap, err) -> {
+            if (err != null) {
+                Log.e(TAG, "Error consultando trabajadores", err);
+                return;
+            }
+            if (snap != null) {
+                listaTrabajadores.clear();
+                for (QueryDocumentSnapshot doc : snap) {
+                    Usuario u = doc.toObject(Usuario.class);
+                    u.setId(doc.getId());
+                    if (u.getEstado() == null) u.setEstado("activo");
+                    listaTrabajadores.add(u);
+                }
+                adapter.notifyDataSetChanged();
+            }
+        });
+    }
+
+    private void mostrarDialogoUsuario(Usuario usuarioExistente) {
+        View v = LayoutInflater.from(this).inflate(R.layout.dialog_usuario, null);
+        TextInputEditText etNombre = v.findViewById(R.id.etNombreUsuario);
+        TextInputEditText etLogin  = v.findViewById(R.id.etUserLogin);
+        TextInputEditText etPass   = v.findViewById(R.id.etPasswordUsuario);
+        RadioGroup        rgRol    = v.findViewById(R.id.rgRolUsuario);
+        RadioButton       rbAdmin  = v.findViewById(R.id.rbAdmin);
+
+        if (usuarioExistente != null) {
+            etNombre.setText(usuarioExistente.getNombre());
+            etLogin.setText(usuarioExistente.getUsuario());
+            etPass.setText(usuarioExistente.getPassword());
+            if ("admin".equals(usuarioExistente.getRol())) rbAdmin.setChecked(true);
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(usuarioExistente == null ? "Nuevo Usuario" : "Editar Usuario")
+                .setView(v)
+                .setPositiveButton("Guardar", (d, w) -> {
+                    String nombre = etNombre.getText().toString().trim();
+                    String login  = etLogin.getText().toString().trim();
+                    String pass   = etPass.getText().toString().trim();
+                    String rol    = rbAdmin.isChecked() ? "admin" : "mecanico";
+
+                    if (nombre.isEmpty() || login.isEmpty() || pass.isEmpty()) {
+                        Toast.makeText(this, "Completa todos los campos", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    if (doc != null && doc.exists()) {
-                        codigoReal = doc.getString("codigo");
-                        Log.d(TAG, "Código cargado desde Firestore: " + codigoReal);
-                        actualizarTextoCodigo();
+
+                    if (usuarioExistente == null) {
+                        // Crear nuevo
+                        Usuario nuevo = new Usuario(null, nombre, "", login, pass, "", rol, "activo");
+                        db.collection("usuarios").add(nuevo)
+                                .addOnSuccessListener(ref -> Toast.makeText(this, "Usuario creado", Toast.LENGTH_SHORT).show());
                     } else {
-                        Log.w(TAG, "El documento 'codigo_acceso' no existe");
+                        // Actualizar
+                        db.collection("usuarios").document(usuarioExistente.getId())
+                                .update("nombre", nombre, "usuario", login, "password", pass, "rol", rol)
+                                .addOnSuccessListener(ref -> Toast.makeText(this, "Usuario actualizado", Toast.LENGTH_SHORT).show());
                     }
-                });
-    }
-
-    private void toggleVisibilidadCodigo() {
-        isCodigoVisible = !isCodigoVisible;
-        actualizarTextoCodigo();
-        // Cambiar icono del ojo (cerrado/abierto)
-        btnToggleVisibilidad.setImageResource(isCodigoVisible ? 
-                android.R.drawable.ic_menu_close_clear_cancel : // X o algo que represente ocultar
-                android.R.drawable.ic_menu_view); // Ojo
-    }
-
-    private void actualizarTextoCodigo() {
-        if (isCodigoVisible) {
-            tvCodigoActual.setText(codigoReal);
-        } else {
-            tvCodigoActual.setText("••••••");
-        }
-    }
-
-    private void copiarCodigoAlPortapapeles() {
-        if (codigoReal == null || codigoReal.isEmpty() || codigoReal.contains("-")) {
-            Toast.makeText(this, "Código no disponible", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        ClipData clip = ClipData.newPlainText("Código Mancuria", codigoReal);
-        clipboard.setPrimaryClip(clip);
-
-        Toast.makeText(this, "Código copiado al portapapeles", Toast.LENGTH_SHORT).show();
-    }
-
-    private void confirmarRegeneracionCodigo() {
-        new AlertDialog.Builder(this)
-                .setTitle("Regenerar Código")
-                .setMessage("¿Estás seguro de cambiar el código de acceso? Los mecánicos deberán ingresar el nuevo código.")
-                .setPositiveButton("Sí, cambiar", (d, w) -> {
-                    String nuevoCodigo = CodigosManager.generarCodigoAleatorio();
-                    db.collection("configuracion").document("codigo_acceso")
-                            .update("codigo", nuevoCodigo)
-                            .addOnSuccessListener(v -> Toast.makeText(this, "Código actualizado", Toast.LENGTH_SHORT).show())
-                            .addOnFailureListener(e -> {
-                                Log.e(TAG, "Error actualizando: " + e.getMessage());
-                                Toast.makeText(this, "Error al actualizar", Toast.LENGTH_SHORT).show();
-                            });
                 })
                 .setNegativeButton("Cancelar", null)
                 .show();
     }
 
-    private void consultarTrabajadores() {
-        db.collection("usuarios").addSnapshotListener((snap, err) -> {
-            if (err != null || snap == null) return;
-            listaTrabajadores.clear();
-            for (QueryDocumentSnapshot doc : snap) {
-                Usuario u = doc.toObject(Usuario.class);
-                u.setId(doc.getId());
-                if (u.getEstado() == null) u.setEstado("activo");
-                listaTrabajadores.add(u);
-            }
-            adapter.notifyDataSetChanged();
-        });
-    }
-
     private void mostrarOpcionesTrabajador(Usuario u, View view) {
         PopupMenu popup = new PopupMenu(this, view);
-        popup.getMenu().add("Cambiar Rol (" + (u.getRol().equals("admin") ? "a Mecánico" : "a Admin") + ")");
-        popup.getMenu().add(u.getEstado().equals("activo") ? "Suspender" : "Reactivar");
-        popup.getMenu().add("Eliminar");
+        popup.getMenu().add("✏️ Editar");
+        popup.getMenu().add(u.getEstado().equals("activo") ? "🚫 Suspender" : "✅ Reactivar");
+        popup.getMenu().add("🗑️ Eliminar");
 
         popup.setOnMenuItemClickListener(item -> {
             String op = item.getTitle().toString();
-            if (op.contains("Cambiar Rol")) {
-                String nuevoRol = u.getRol().equals("admin") ? "mecanico" : "admin";
-                db.collection("usuarios").document(u.getId()).update("rol", nuevoRol);
-            } else if (op.equals("Suspender") || op.equals("Reactivar")) {
+            if (op.contains("Editar")) {
+                mostrarDialogoUsuario(u);
+            } else if (op.contains("Suspender") || op.contains("Reactivar")) {
                 String nuevoEstado = u.getEstado().equals("activo") ? "suspendido" : "activo";
                 db.collection("usuarios").document(u.getId()).update("estado", nuevoEstado);
-            } else if (op.equals("Eliminar")) {
+            } else if (op.contains("Eliminar")) {
                 confirmarEliminacion(u);
             }
             return true;
