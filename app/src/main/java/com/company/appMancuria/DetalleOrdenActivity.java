@@ -1,5 +1,7 @@
 package com.company.appMancuria;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -20,8 +22,6 @@ import androidx.core.view.WindowInsetsCompat;
 import com.company.appMancuria.models.OrdenTrabajo;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
@@ -48,7 +48,6 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detalle_orden);
 
-        // Aplicar insets para Safe Areas
         View mainView = findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -97,7 +96,6 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         btnActualizar.setOnClickListener(v -> actualizarDatos());
         btnSiguiente.setOnClickListener(v -> gestionarCambioEstado());
         
-        // Inicialmente desactivado hasta que se detecten cambios
         btnActualizar.setEnabled(false);
     }
 
@@ -131,7 +129,6 @@ public class DetalleOrdenActivity extends AppCompatActivity {
                              currentKm != orden.getKilometraje() ||
                              currentMonto != orden.getMontoTotal();
 
-        // Evitar spam: solo habilitar si hay cambios reales y no ha sido entregado
         btnActualizar.setEnabled(hayCambios && !"Entregado".equals(orden.getEstado()));
     }
 
@@ -156,12 +153,10 @@ public class DetalleOrdenActivity extends AppCompatActivity {
 
         etFalla.setText(orden.getFallaReportada());
         
-        // Evitar que el cursor salte al final si el usuario está escribiendo durante un snapshot
         if (!etTrabajo.hasFocus()) etTrabajo.setText(orden.getTrabajoRealizado());
         if (!etKm.hasFocus()) etKm.setText(String.valueOf(orden.getKilometraje()));
         if (!etMonto.hasFocus()) etMonto.setText(String.valueOf(orden.getMontoTotal()));
 
-        // Color del estado
         int color;
         switch (orden.getEstado()) {
             case "En Proceso": color = Color.parseColor("#F57C00"); break;
@@ -171,7 +166,6 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         }
         tvEstado.setBackgroundTintList(ColorStateList.valueOf(color));
 
-        // Desactivar edición si ya fue entregado
         boolean esEditable = !"Entregado".equals(orden.getEstado());
         etTrabajo.setEnabled(esEditable);
         etKm.setEnabled(esEditable);
@@ -179,7 +173,6 @@ public class DetalleOrdenActivity extends AppCompatActivity {
 
         actualizarTextoBotonSiguiente();
         
-        // Historial formateado con bitácora de trabajos
         StringBuilder sb = new StringBuilder();
         if (orden.getHistorial() != null) {
             for (int i = orden.getHistorial().size() - 1; i >= 0; i--) {
@@ -248,10 +241,10 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     }
 
     private void cambiarEstado(String nuevoEstado) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String userName = (user != null && user.getDisplayName() != null) ? user.getDisplayName() : "Usuario";
+        // ✅ Obtener nombre del SharedPreferences
+        SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
+        String userName = prefs.getString("userNombre", "Usuario");
         
-        // Al cambiar de estado, guardamos también el estado actual del trabajo
         String trabajoActual = etTrabajo.getText().toString().trim();
         
         OrdenTrabajo.LogEntrada log = new OrdenTrabajo.LogEntrada(
@@ -283,29 +276,19 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         int km = Integer.parseInt(kmStr);
         double monto = Double.parseDouble(montoStr);
 
-        // Validación de kilometraje descendente
         if (km < orden.getKilometraje()) {
             Toast.makeText(this, "El kilometraje no puede ser menor al registrado anteriormente (" + orden.getKilometraje() + " km)", Toast.LENGTH_LONG).show();
             return;
         }
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String userName = (user != null && user.getDisplayName() != null) ? user.getDisplayName() : "Usuario";
+        // ✅ Obtener nombre del SharedPreferences
+        SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
+        String userName = prefs.getString("userNombre", "Usuario");
         
-        // Crear un log detallado que guarde el contenido del trabajo realizado
         StringBuilder bitacora = new StringBuilder("ACTUALIZACIÓN DE DATOS:");
-        
-        if (!trabajo.equals(orden.getTrabajoRealizado())) {
-            bitacora.append("\n- TRABAJO REALIZADO: ").append(trabajo);
-        }
-        
-        if (km != orden.getKilometraje()) {
-            bitacora.append("\n- KM: ").append(orden.getKilometraje()).append(" → ").append(km);
-        }
-        
-        if (monto != orden.getMontoTotal()) {
-            bitacora.append("\n- MONTO: S/ ").append(orden.getMontoTotal()).append(" → S/ ").append(monto);
-        }
+        if (!trabajo.equals(orden.getTrabajoRealizado())) bitacora.append("\n- TRABAJO REALIZADO: ").append(trabajo);
+        if (km != orden.getKilometraje()) bitacora.append("\n- KM: ").append(orden.getKilometraje()).append(" → ").append(km);
+        if (monto != orden.getMontoTotal()) bitacora.append("\n- MONTO: S/ ").append(orden.getMontoTotal()).append(" → S/ ").append(monto);
 
         OrdenTrabajo.LogEntrada log = new OrdenTrabajo.LogEntrada(
                 SDF.format(new Date()),
@@ -317,7 +300,6 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         if (historial == null) historial = new ArrayList<>();
         historial.add(log);
 
-        // Desactivar botón para evitar spam
         btnActualizar.setEnabled(false);
         
         db.collection("ordenes_trabajo").document(ordenId)
@@ -326,7 +308,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
                         "montoTotal", monto,
                         "historial", historial)
                 .addOnSuccessListener(v -> {
-                    Toast.makeText(this, "Cambios guardados en historial y base de datos", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Cambios guardados", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
                     btnActualizar.setEnabled(true);
