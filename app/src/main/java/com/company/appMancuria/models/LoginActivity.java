@@ -31,30 +31,40 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // 1. Verificar si ya hay una sesión guardada antes de cargar el diseño
+        SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
+        if (prefs.getString("userId", null) != null) {
+            irAlMain();
+            return;
+        }
+
         setContentView(R.layout.activity_login);
 
-        // Status bar roja
+        // 2. Configuración estética (Status Bar Roja)
         getWindow().setStatusBarColor(Color.parseColor("#db2d2c"));
 
-        // Referencias a los spacers para insets
+        // Spacers para Insets (Status bar y Navigation bar)
         View statusBarSpacer = findViewById(R.id.statusBarSpacer);
         View navigationBarSpacer = findViewById(R.id.navigationBarSpacer);
         View root = findViewById(R.id.rootLogin);
 
-        // Gestionar insets (Status Bar y Navigation Bar)
-        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
-            // Ajustar altura del spacer superior (Status Bar)
-            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
-            statusBarSpacer.getLayoutParams().height = statusBarHeight;
-            statusBarSpacer.requestLayout();
+        if (root != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+                int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+                if (statusBarSpacer != null) {
+                    statusBarSpacer.getLayoutParams().height = statusBarHeight;
+                    statusBarSpacer.requestLayout();
+                }
 
-            // Ajustar altura del spacer inferior (Botones de navegación)
-            int navBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
-            navigationBarSpacer.getLayoutParams().height = navBarHeight;
-            navigationBarSpacer.requestLayout();
-
-            return insets;
-        });
+                int navBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+                if (navigationBarSpacer != null) {
+                    navigationBarSpacer.getLayoutParams().height = navBarHeight;
+                    navigationBarSpacer.requestLayout();
+                }
+                return insets;
+            });
+        }
 
         // Firebase
         mAuth = FirebaseAuth.getInstance();
@@ -65,7 +75,9 @@ public class LoginActivity extends AppCompatActivity {
         etPassword  = findViewById(R.id.etPasswordLogin);
         btnIngresar = findViewById(R.id.btnLogin);
 
-        btnIngresar.setOnClickListener(v -> intentarLoginInterno());
+        if (btnIngresar != null) {
+            btnIngresar.setOnClickListener(v -> intentarLoginInterno());
+        }
 
         // Animación de entrada
         findViewById(android.R.id.content)
@@ -82,6 +94,7 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         btnIngresar.setEnabled(false);
+        // Iniciamos sesión anónima en Firebase para poder consultar Firestore
         if (mAuth.getCurrentUser() == null) {
             mAuth.signInAnonymously().addOnCompleteListener(task -> {
                 if (task.isSuccessful()) {
@@ -126,12 +139,15 @@ public class LoginActivity extends AppCompatActivity {
                 .putString("userId", u.getId())
                 .putString("userNombre", u.getNombre())
                 .putString("userRol", u.getRol())
-                .apply();
+                .apply(); // apply() es persistente tras cerrar la app
         irAlMain();
     }
 
     private void irAlMain() {
-        startActivity(new Intent(this, MainActivity.class));
+        Intent intent = new Intent(this, MainActivity.class);
+        // Evitar que el usuario vuelva al Login con el botón atrás
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
         finish();
     }
 }
