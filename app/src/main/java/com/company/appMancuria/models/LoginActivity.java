@@ -3,13 +3,15 @@ package com.company.appMancuria.models;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.view.animation.AnimationUtils;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.company.appMancuria.MainActivity;
 import com.company.appMancuria.R;
@@ -21,7 +23,6 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private static final String TAG = "LoginActivity";
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private TextInputEditText etUsuario, etPassword;
@@ -32,33 +33,43 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
+        // Status bar roja
+        getWindow().setStatusBarColor(Color.parseColor("#db2d2c"));
+
+        // Referencias a los spacers para insets
+        View statusBarSpacer = findViewById(R.id.statusBarSpacer);
+        View navigationBarSpacer = findViewById(R.id.navigationBarSpacer);
+        View root = findViewById(R.id.rootLogin);
+
+        // Gestionar insets (Status Bar y Navigation Bar)
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            // Ajustar altura del spacer superior (Status Bar)
+            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            statusBarSpacer.getLayoutParams().height = statusBarHeight;
+            statusBarSpacer.requestLayout();
+
+            // Ajustar altura del spacer inferior (Botones de navegación)
+            int navBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            navigationBarSpacer.getLayoutParams().height = navBarHeight;
+            navigationBarSpacer.requestLayout();
+
+            return insets;
+        });
+
+        // Firebase
         mAuth = FirebaseAuth.getInstance();
         db    = FirebaseFirestore.getInstance();
 
-        etUsuario  = findViewById(R.id.etUserLogin);
-        etPassword = findViewById(R.id.etPasswordLogin);
+        // Views
+        etUsuario   = findViewById(R.id.etUserLogin);
+        etPassword  = findViewById(R.id.etPasswordLogin);
         btnIngresar = findViewById(R.id.btnLogin);
 
         btnIngresar.setOnClickListener(v -> intentarLoginInterno());
 
-        // Botón Google (Temporal para migración progresiva)
-        findViewById(R.id.btnGoogleLogin).setOnClickListener(v -> {
-            Toast.makeText(this, "Acceso con Google deshabilitado temporalmente. Use sus credenciales internas.", Toast.LENGTH_LONG).show();
-        });
-
         // Animación de entrada
-        findViewById(android.R.id.content).startAnimation(AnimationUtils.loadAnimation(this, R.anim.fade_slide_in));
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        // Verificar si hay una sesión interna activa
-        SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
-        String userId = prefs.getString("userId", null);
-        if (userId != null) {
-            verificarEstadoYEntrar(userId);
-        }
+        findViewById(android.R.id.content)
+                .startAnimation(AnimationUtils.loadAnimation(this, R.anim.fade_slide_in));
     }
 
     private void intentarLoginInterno() {
@@ -66,13 +77,26 @@ public class LoginActivity extends AppCompatActivity {
         String passStr = etPassword.getText().toString().trim();
 
         if (userStr.isEmpty() || passStr.isEmpty()) {
-            Toast.makeText(this, "Ingresa usuario y contraseña", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Ingresa tus credenciales", Toast.LENGTH_SHORT).show();
             return;
         }
 
         btnIngresar.setEnabled(false);
+        if (mAuth.getCurrentUser() == null) {
+            mAuth.signInAnonymously().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    ejecutarConsultaLogin(userStr, passStr);
+                } else {
+                    btnIngresar.setEnabled(true);
+                    Toast.makeText(this, "Error de conexión", Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            ejecutarConsultaLogin(userStr, passStr);
+        }
+    }
 
-        // Buscar el usuario en la colección "usuarios"
+    private void ejecutarConsultaLogin(String userStr, String passStr) {
         db.collection("usuarios")
                 .whereEqualTo("usuario", userStr)
                 .whereEqualTo("password", passStr)
@@ -83,11 +107,10 @@ public class LoginActivity extends AppCompatActivity {
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             Usuario u = document.toObject(Usuario.class);
                             u.setId(document.getId());
-                            
                             if ("suspendido".equals(u.getEstado())) {
-                                Toast.makeText(this, "Tu cuenta está suspendida", Toast.LENGTH_LONG).show();
+                                Toast.makeText(this, "Cuenta suspendida", Toast.LENGTH_LONG).show();
                             } else {
-                                iniciarSesionLocal(u);
+                                guardarSesionLocal(u);
                             }
                             return;
                         }
@@ -97,43 +120,18 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
-    private void iniciarSesionLocal(Usuario u) {
-        // Guardar sesión en SharedPreferences
+    private void guardarSesionLocal(Usuario u) {
         SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
         prefs.edit()
                 .putString("userId", u.getId())
                 .putString("userNombre", u.getNombre())
                 .putString("userRol", u.getRol())
                 .apply();
-
-        // Para mantener las reglas de Firestore (request.auth != null),
-        // iniciamos sesión anónima en Firebase Auth si no lo está.
-        if (mAuth.getCurrentUser() == null) {
-            mAuth.signInAnonymously().addOnCompleteListener(task -> irAlMain());
-        } else {
-            irAlMain();
-        }
-    }
-
-    private void verificarEstadoYEntrar(String userId) {
-        db.collection("usuarios").document(userId).get()
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists() && !"suspendido".equals(doc.getString("estado"))) {
-                        irAlMain();
-                    } else {
-                        // Sesión inválida o suspendida
-                        cerrarSesionLocal();
-                    }
-                });
-    }
-
-    private void cerrarSesionLocal() {
-        getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE).edit().clear().apply();
+        irAlMain();
     }
 
     private void irAlMain() {
         startActivity(new Intent(this, MainActivity.class));
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
         finish();
     }
 }
