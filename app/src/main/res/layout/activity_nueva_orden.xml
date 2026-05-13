@@ -4,9 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/fondo_app">
+    android:background="#F2F3F5">
 
-    <!-- Toolbar -->
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
@@ -20,23 +19,21 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="14dp"
-        android:fillViewport="true"
-        android:isScrollContainer="true">
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="14dp">
 
-            <!-- ══ PASO 1: CLIENTE ══ -->
+            <!-- ══ PASO 1 ══ -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardCliente"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="14dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/fondo_card"
+                app:cardBackgroundColor="#FFFFFF"
                 android:layout_marginBottom="12dp">
 
                 <LinearLayout
@@ -45,76 +42,77 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Header sección -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:layout_marginBottom="14dp">
+                        android:layout_marginBottom="16dp">
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardNumCliente"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            app:cardCornerRadius="16dp"
+                            app:cardBackgroundColor="@color/rojo_mancuria"
+                            app:cardElevation="0dp">
+                            <TextView
+                                android:id="@+id/tvNumCliente"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center"
+                                android:text="1"
+                                android:textColor="#FFFFFF"
+                                android:textStyle="bold"
+                                android:textSize="14sp" />
+                        </com.google.android.material.card.MaterialCardView>
+
                         <TextView
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:text="1"
-                            android:gravity="center"
-                            android:textColor="#FFFFFF"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="12dp"
+                            android:text="Seleccionar Cliente"
                             android:textStyle="bold"
-                            android:textSize="14sp"
-                            android:background="@drawable/bg_badge_estado"
-                            android:backgroundTint="@color/rojo_mancuria"/>
-                        <TextView
+                            android:textSize="16sp"
+                            android:textColor="#212121" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnNuevoCliente"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="  Seleccionar Cliente"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/texto_principal"/>
+                            android:text="+ NUEVO"
+                            android:textColor="@color/rojo_mancuria"
+                            android:textStyle="bold"/>
                     </LinearLayout>
 
-                    <!-- Botón nuevo cliente -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnNuevoCliente"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:text="+ Registrar nuevo cliente"
-                        android:textAllCaps="false"
-                        android:textSize="14sp"
-                        android:textColor="@color/rojo_mancuria"
-                        app:strokeColor="@color/rojo_mancuria"
-                        app:cornerRadius="12dp"
-                        android:layout_marginBottom="16dp"/>
-
-                    <!-- Buscador Clientes -->
                     <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/layoutCliente"
                         style="@style/InputRojo"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Buscar cliente existente..."
-                        android:layout_marginBottom="10dp"
-                        app:startIconDrawable="@android:drawable/ic_menu_search"
-                        app:startIconTint="@color/rojo_mancuria">
+                        android:hint="Escribe nombre o documento..."
+                        app:boxBackgroundColor="#FFFFFF">
                         <AutoCompleteTextView
                             android:id="@+id/actvCliente"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/texto_principal"
-                            android:completionThreshold="1"
-                            android:inputType="text"/>
+                            android:layout_height="56dp"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:textColor="#212121"
+                            android:background="@null"
+                            android:inputType="text" />
                     </com.google.android.material.textfield.TextInputLayout>
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ══ PASO 2: VEHÍCULO ══ -->
+            <!-- ── PASO 2 ── -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardVehiculo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="14dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/fondo_card"
+                app:cardBackgroundColor="#FFFFFF"
                 android:layout_marginBottom="12dp">
 
                 <LinearLayout
@@ -128,69 +126,76 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:layout_marginBottom="14dp">
+                        android:layout_marginBottom="16dp">
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardNumVehiculo"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            app:cardCornerRadius="16dp"
+                            app:cardBackgroundColor="#BDBDBD"
+                            app:cardElevation="0dp">
+                            <TextView
+                                android:id="@+id/tvNumVehiculo"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center"
+                                android:text="2"
+                                android:textColor="#FFFFFF"
+                                android:textStyle="bold"
+                                android:textSize="14sp" />
+                        </com.google.android.material.card.MaterialCardView>
+
                         <TextView
-                            android:id="@+id/tvNumVehiculo"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:text="2"
-                            android:gravity="center"
-                            android:textColor="#FFFFFF"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="12dp"
+                            android:text="Seleccionar Vehículo"
                             android:textStyle="bold"
-                            android:textSize="14sp"
-                            android:background="@drawable/bg_badge_estado"
-                            android:backgroundTint="#BDBDBD"/>
-                        <TextView
+                            android:textSize="16sp"
+                            android:textColor="#212121" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnNuevoVehiculo"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="  Vehículo"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/texto_secundario"/>
+                            android:text="+ NUEVO"
+                            android:textColor="@color/rojo_mancuria"
+                            android:enabled="false"
+                            android:textStyle="bold"/>
                     </LinearLayout>
 
-                    <!-- Buscador Vehículos -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/layoutVehiculo"
                         style="@style/InputRojo"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Seleccionar vehículo"
-                        android:layout_marginBottom="10dp">
-
+                        android:hint="Selecciona un vehículo"
+                        android:enabled="false"
+                        app:boxBackgroundColor="#FFFFFF">
                         <AutoCompleteTextView
                             android:id="@+id/actvVehiculo"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:enabled="false"
-                            android:inputType="none"
-                            android:textColor="@color/texto_principal" />
+                            android:layout_height="56dp"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:textColor="#212121"
+                            android:background="@null"
+                            android:inputType="none" />
                     </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnNuevoVehiculo"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="+ Agregar vehículo"
-                        android:textAllCaps="false"
-                        android:textSize="13sp"
-                        android:textColor="@color/texto_secundario"
-                        app:strokeColor="@color/divider"
-                        app:cornerRadius="18dp"
-                        android:enabled="false"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ══ PASO 3: DETALLES ══ -->
+            <!-- ── PASO 3 ── -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardDetalles"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="14dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/fondo_card"
-                android:layout_marginBottom="12dp">
+                app:cardBackgroundColor="#FFFFFF"
+                android:layout_marginBottom="20dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -203,129 +208,129 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:layout_marginBottom="14dp">
-                        <TextView
-                            android:id="@+id/tvNumDetalles"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:text="3"
-                            android:gravity="center"
-                            android:textColor="#FFFFFF"
-                            android:textStyle="bold"
-                            android:textSize="14sp"
-                            android:background="@drawable/bg_badge_estado"
-                            android:backgroundTint="#BDBDBD"/>
+                        android:layout_marginBottom="16dp">
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardNumDetalles"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            app:cardCornerRadius="16dp"
+                            app:cardBackgroundColor="#BDBDBD"
+                            app:cardElevation="0dp">
+                            <TextView
+                                android:id="@+id/tvNumDetalles"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center"
+                                android:text="3"
+                                android:textColor="#FFFFFF"
+                                android:textStyle="bold"
+                                android:textSize="14sp" />
+                        </com.google.android.material.card.MaterialCardView>
+
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="  Detalles de la Orden"
-                            android:textSize="16sp"
+                            android:layout_marginStart="12dp"
+                            android:text="Detalles del Trabajo"
                             android:textStyle="bold"
-                            android:textColor="@color/texto_secundario"/>
+                            android:textSize="16sp"
+                            android:textColor="#212121" />
                     </LinearLayout>
 
-                    <!-- Falla -->
+                    <!-- TIPO DE SERVICIO (MENU SIN TECLADO) -->
                     <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/layoutFalla"
+                        android:id="@+id/tilServicio"
                         style="@style/InputRojo"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Falla reportada / Observaciones"
-                        android:layout_marginBottom="12dp">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etFalla"
+                        android:hint="Seleccionar Servicios"
+                        app:boxBackgroundColor="#FFFFFF"
+                        android:layout_marginBottom="8dp">
+                        <AutoCompleteTextView
+                            android:id="@+id/actvServicio"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/texto_principal"
-                            android:inputType="textMultiLine"
-                            android:lines="3"
-                            android:gravity="top"
-                            android:enabled="false"/>
+                            android:layout_height="56dp"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:textSize="15sp"
+                            android:textColor="#212121"
+                            android:background="@null"
+                            android:enabled="false"
+                            android:focusable="false"
+                            android:cursorVisible="false"
+                            android:inputType="none" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- Kilometraje + Monto en fila -->
+                    <!-- CONTENEDOR DE SERVICIOS SELECCIONADOS (STACK VERTICAL) -->
                     <LinearLayout
+                        android:id="@+id/llServiciosSeleccionados"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginBottom="12dp">
+                        android:orientation="vertical"
+                        android:layout_marginBottom="16dp" />
 
-                        <com.google.android.material.textfield.TextInputLayout
-                            android:id="@+id/layoutKm"
-                            style="@style/InputRojo"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:hint="Kilometraje"
-                            android:layout_marginEnd="8dp"
-                            app:suffixText=" km">
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etKilometraje"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:textColor="@color/texto_principal"
-                                android:inputType="number"
-                                android:enabled="false"/>
-                        </com.google.android.material.textfield.TextInputLayout>
-
-                        <com.google.android.material.textfield.TextInputLayout
-                            android:id="@+id/layoutMonto"
-                            style="@style/InputRojo"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:hint="Presupuesto"
-                            app:prefixText="S/ ">
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etMonto"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:textColor="@color/texto_principal"
-                                android:inputType="numberDecimal"
-                                android:enabled="false"/>
-                        </com.google.android.material.textfield.TextInputLayout>
-                    </LinearLayout>
-
-                    <!-- Fecha de ingreso (automática, solo lectura) -->
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/InputRojo"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Fecha de ingreso"
-                        android:layout_marginBottom="16dp"
-                        app:startIconDrawable="@android:drawable/ic_menu_today"
-                        app:startIconTint="@color/rojo_mancuria">
+                        android:hint="Kilometraje Inicial"
+                        app:boxBackgroundColor="#FFFFFF"
+                        android:layout_marginBottom="16dp">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etKilometraje"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:inputType="number"
+                            android:textColor="#212121"
+                            android:enabled="false" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/InputRojo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Presupuesto Estimado (Opcional)"
+                        app:boxBackgroundColor="#FFFFFF"
+                        android:layout_marginBottom="16dp">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etMonto"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:inputType="numberDecimal"
+                            android:textColor="#212121"
+                            android:enabled="false" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/InputRojo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Fecha de Ingreso"
+                        app:boxBackgroundColor="#FFFFFF">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etFechaIngreso"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/texto_principal"
-                            android:focusable="false"
-                            android:clickable="false"
-                            android:cursorVisible="false"
-                            android:background="@null"/>
+                            android:layout_height="56dp"
+                            android:enabled="false"
+                            android:textColor="#757575" />
                     </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Botón guardar -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnGuardar"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:text="GUARDAR ORDEN"
-                        android:textAllCaps="false"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        app:backgroundTint="@color/rojo_mancuria"
-                        app:cornerRadius="12dp"
-                        android:enabled="false"/>
-
-                    <!-- Espacio extra al final para evitar que el teclado tape el botón guardar -->
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="200dp"/>
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGuardar"
+                android:layout_width="match_parent"
+                android:layout_height="58dp"
+                android:layout_marginTop="10dp"
+                android:text="CREAR ORDEN DE TRABAJO"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:enabled="false"
+                app:cornerRadius="12dp"
+                app:backgroundTint="@color/rojo_mancuria" />
+
+            <View android:layout_width="match_parent" android:layout_height="400dp" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

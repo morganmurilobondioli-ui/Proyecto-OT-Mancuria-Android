@@ -4,8 +4,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/fondo_app">
+    android:background="#F2F3F5">
 
+    <!-- Toolbar Roja Fija -->
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbarDetalle"
         android:layout_width="match_parent"
@@ -19,22 +20,21 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="14dp"
-        android:fillViewport="true"
-        android:isScrollContainer="true">
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="14dp">
 
-            <!-- Card Resumen -->
+            <!-- Card Resumen (Placa y Cliente) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="14dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/fondo_card"
+                app:cardBackgroundColor="#FFFFFF"
                 android:layout_marginBottom="12dp">
 
                 <LinearLayout
@@ -58,13 +58,13 @@
                         android:layout_height="wrap_content"
                         android:text="Nombre del Cliente"
                         android:textSize="16sp"
-                        android:textColor="@color/texto_principal"
+                        android:textColor="#212121"
                         android:layout_marginTop="4dp"/>
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="@color/divider"
+                        android:background="#EEEEEE"
                         android:layout_marginVertical="12dp"/>
 
                     <LinearLayout
@@ -89,7 +89,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="01/01/2024"
-                            android:textColor="@color/texto_secundario"/>
+                            android:textColor="#616161"/>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -98,9 +98,9 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="14dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/fondo_card"
+                app:cardBackgroundColor="#FFFFFF"
                 android:layout_marginBottom="12dp">
 
                 <LinearLayout
@@ -110,33 +110,40 @@
                     android:padding="16dp">
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="REPORTE TÉCNICO"
                         android:textSize="13sp"
                         android:textStyle="bold"
-                        android:textColor="@color/texto_secundario"
+                        android:textColor="#616161"
                         android:layout_marginBottom="12dp"/>
 
+                    <!-- TIPO DE SERVICIO (MULTILINEA CORREGIDO) -->
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilServicio"
                         style="@style/InputRojo"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Falla Reportada"
-                        android:layout_marginBottom="12dp">
+                        android:hint="Tipo de Servicio"
+                        app:boxBackgroundColor="#FFFFFF"
+                        android:layout_marginBottom="16dp">
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etDetalleFalla"
+                            android:id="@+id/etDetalleServicio"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:enabled="false"
-                            android:textColor="@color/texto_principal"/>
+                            android:textSize="15sp"
+                            android:textColor="#212121"
+                            android:inputType="textMultiLine"
+                            android:gravity="top|start"
+                            android:minLines="1" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/InputRojo"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Trabajo Realizado"
+                        android:hint="Observaciones / Detalles del Trabajo"
+                        app:boxBackgroundColor="#FFFFFF"
                         android:layout_marginBottom="12dp">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etDetalleTrabajo"
@@ -144,8 +151,8 @@
                             android:layout_height="wrap_content"
                             android:inputType="textMultiLine"
                             android:lines="3"
-                            android:gravity="top"
-                            android:textColor="@color/texto_principal"/>
+                            android:gravity="top|start"
+                            android:textColor="#212121"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <LinearLayout
@@ -158,13 +165,14 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:hint="Kilometraje"
+                            app:boxBackgroundColor="#FFFFFF"
                             android:layout_marginEnd="8dp">
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etDetalleKm"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
+                                android:layout_height="56dp"
                                 android:inputType="number"
-                                android:textColor="@color/texto_principal"/>
+                                android:textColor="#212121"/>
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
@@ -172,13 +180,14 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:hint="Monto S/" >
+                            android:hint="Monto S/"
+                            app:boxBackgroundColor="#FFFFFF">
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etDetalleMonto"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
+                                android:layout_height="56dp"
                                 android:inputType="numberDecimal"
-                                android:textColor="@color/texto_principal"/>
+                                android:textColor="#212121"/>
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
                 </LinearLayout>
@@ -188,9 +197,9 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="14dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/fondo_card"
+                app:cardBackgroundColor="#FFFFFF"
                 android:layout_marginBottom="12dp">
 
                 <LinearLayout
@@ -205,7 +214,7 @@
                         android:text="HISTORIAL DE CAMBIOS"
                         android:textSize="13sp"
                         android:textStyle="bold"
-                        android:textColor="@color/texto_secundario"
+                        android:textColor="#616161"
                         android:layout_marginBottom="12dp"/>
 
                     <TextView
@@ -214,49 +223,38 @@
                         android:layout_height="wrap_content"
                         android:text="No hay registros..."
                         android:textSize="12sp"
-                        android:textColor="@color/texto_secundario"
+                        android:textColor="#616161"
                         android:lineSpacingExtra="4dp"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Acciones -->
-            <LinearLayout
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSiguienteEstado"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="24dp">
+                android:layout_height="54dp"
+                android:text="SIGUIENTE ESTADO"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:cornerRadius="12dp"
+                app:backgroundTint="@color/rojo_mancuria"
+                android:layout_marginBottom="12dp"/>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSiguienteEstado"
-                    android:layout_width="match_parent"
-                    android:layout_height="54dp"
-                    android:text="PASAR A EN PROCESO"
-                    android:textAllCaps="false"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="12dp"
-                    app:backgroundTint="@color/rojo_mancuria"
-                    android:layout_marginBottom="12dp"/>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnActualizarDatos"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:text="Guardar Cambios"
-                    android:textAllCaps="false"
-                    app:cornerRadius="12dp"
-                    app:strokeColor="@color/rojo_mancuria"
-                    android:textColor="@color/rojo_mancuria"/>
-            </LinearLayout>
-
-            <!-- Espacio extra para el teclado -->
-            <View
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnActualizarDatos"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
-                android:layout_height="250dp"/>
+                android:layout_height="50dp"
+                android:text="Guardar Cambios"
+                android:textAllCaps="false"
+                app:cornerRadius="12dp"
+                app:strokeColor="@color/rojo_mancuria"
+                android:textColor="@color/rojo_mancuria"/>
+
+            <!-- Espaciador para que el teclado no tape el presupuesto al escribir -->
+            <View android:layout_width="match_parent" android:layout_height="350dp"/>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-
 </LinearLayout>

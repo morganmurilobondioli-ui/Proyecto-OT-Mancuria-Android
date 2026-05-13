@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,6 +24,7 @@ import com.company.appMancuria.models.OrdenTrabajo;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -37,7 +39,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     private String ordenId;
 
     private TextView tvPlaca, tvCliente, tvEstado, tvFecha, tvHistorial;
-    private TextInputEditText etFalla, etTrabajo, etKm, etMonto;
+    private TextInputEditText etServicio, etTrabajo, etKm, etMonto;
     private MaterialButton btnSiguiente, btnActualizar;
 
     private static final SimpleDateFormat SDF = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
@@ -85,7 +87,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         tvFecha = findViewById(R.id.tvDetalleFecha);
         tvHistorial = findViewById(R.id.tvHistorial);
 
-        etFalla = findViewById(R.id.etDetalleFalla);
+        etServicio = findViewById(R.id.etDetalleServicio);
         etTrabajo = findViewById(R.id.etDetalleTrabajo);
         etKm = findViewById(R.id.etDetalleKm);
         etMonto = findViewById(R.id.etDetalleMonto);
@@ -107,6 +109,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
                 verificarCambios();
             }
         };
+        etServicio.addTextChangedListener(watcher);
         etTrabajo.addTextChangedListener(watcher);
         etKm.addTextChangedListener(watcher);
         etMonto.addTextChangedListener(watcher);
@@ -115,6 +118,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     private void verificarCambios() {
         if (orden == null) return;
 
+        String currentServicio = etServicio.getText().toString().trim();
         String currentTrabajo = etTrabajo.getText().toString().trim();
         String currentKmStr = etKm.getText().toString().trim();
         String currentMontoStr = etMonto.getText().toString().trim();
@@ -125,7 +129,8 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         double currentMonto = 0.0;
         try { currentMonto = Double.parseDouble(currentMontoStr); } catch (Exception ignored) {}
 
-        boolean hayCambios = !currentTrabajo.equals(orden.getTrabajoRealizado()) ||
+        boolean hayCambios = !currentServicio.equals(orden.getFallaReportada()) ||
+                             !currentTrabajo.equals(orden.getTrabajoRealizado()) ||
                              currentKm != orden.getKilometraje() ||
                              currentMonto != orden.getMontoTotal();
 
@@ -151,8 +156,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         tvEstado.setText(orden.getEstado().toUpperCase());
         tvFecha.setText(SDF.format(new Date(orden.getFechaIngreso())));
 
-        etFalla.setText(orden.getFallaReportada());
-        
+        if (!etServicio.hasFocus()) etServicio.setText(orden.getFallaReportada());
         if (!etTrabajo.hasFocus()) etTrabajo.setText(orden.getTrabajoRealizado());
         if (!etKm.hasFocus()) etKm.setText(String.valueOf(orden.getKilometraje()));
         if (!etMonto.hasFocus()) etMonto.setText(String.valueOf(orden.getMontoTotal()));
@@ -167,6 +171,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         tvEstado.setBackgroundTintList(ColorStateList.valueOf(color));
 
         boolean esEditable = !"Entregado".equals(orden.getEstado());
+        etServicio.setEnabled(esEditable);
         etTrabajo.setEnabled(esEditable);
         etKm.setEnabled(esEditable);
         etMonto.setEnabled(esEditable);
@@ -211,8 +216,8 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         switch (orden.getEstado()) {
             case "Pendiente": proximoEstado = "En Proceso"; break;
             case "En Proceso": 
-                if (etTrabajo.getText().toString().trim().isEmpty()) {
-                    Toast.makeText(this, "Debe describir el trabajo realizado antes de finalizar", Toast.LENGTH_LONG).show();
+                if (etServicio.getText().toString().trim().isEmpty()) {
+                    Toast.makeText(this, "Debe ingresar el tipo de servicio", Toast.LENGTH_LONG).show();
                     return;
                 }
                 proximoEstado = "Finalizado"; 
@@ -241,17 +246,18 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     }
 
     private void cambiarEstado(String nuevoEstado) {
-        // ✅ Obtener nombre del SharedPreferences
         SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
         String userName = prefs.getString("userNombre", "Usuario");
         
         String trabajoActual = etTrabajo.getText().toString().trim();
+        String servicioActual = etServicio.getText().toString().trim();
         
         OrdenTrabajo.LogEntrada log = new OrdenTrabajo.LogEntrada(
                 SDF.format(new Date()),
                 userName,
                 "CAMBIO DE ESTADO: " + orden.getEstado() + " → " + nuevoEstado +
-                (!trabajoActual.isEmpty() ? "\nDetalle trabajo: " + trabajoActual : "")
+                (!servicioActual.isEmpty() ? "\nServicio: " + servicioActual : "") +
+                (!trabajoActual.isEmpty() ? "\nDetalles: " + trabajoActual : "")
         );
 
         List<OrdenTrabajo.LogEntrada> historial = orden.getHistorial();
@@ -264,6 +270,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     }
 
     private void actualizarDatos() {
+        String servicio = etServicio.getText().toString().trim();
         String trabajo = etTrabajo.getText().toString().trim();
         String kmStr = etKm.getText().toString().trim();
         String montoStr = etMonto.getText().toString().trim();
@@ -281,12 +288,12 @@ public class DetalleOrdenActivity extends AppCompatActivity {
             return;
         }
 
-        // ✅ Obtener nombre del SharedPreferences
         SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
         String userName = prefs.getString("userNombre", "Usuario");
         
         StringBuilder bitacora = new StringBuilder("ACTUALIZACIÓN DE DATOS:");
-        if (!trabajo.equals(orden.getTrabajoRealizado())) bitacora.append("\n- TRABAJO REALIZADO: ").append(trabajo);
+        if (!servicio.equals(orden.getFallaReportada())) bitacora.append("\n- TIPO SERVICIO: ").append(servicio);
+        if (!trabajo.equals(orden.getTrabajoRealizado())) bitacora.append("\n- DETALLES: ").append(trabajo);
         if (km != orden.getKilometraje()) bitacora.append("\n- KM: ").append(orden.getKilometraje()).append(" → ").append(km);
         if (monto != orden.getMontoTotal()) bitacora.append("\n- MONTO: S/ ").append(orden.getMontoTotal()).append(" → S/ ").append(monto);
 
@@ -303,7 +310,8 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         btnActualizar.setEnabled(false);
         
         db.collection("ordenes_trabajo").document(ordenId)
-                .update("trabajoRealizado", trabajo, 
+                .update("fallareportada", servicio,
+                        "trabajoRealizado", trabajo, 
                         "kilometraje", km, 
                         "montoTotal", monto,
                         "historial", historial)

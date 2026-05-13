@@ -1,6 +1,7 @@
 package com.company.appMancuria;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputFilter;
@@ -24,19 +25,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.company.appMancuria.adapters.ClienteAdapter;
 import com.company.appMancuria.models.Cliente;
 import com.company.appMancuria.models.Vehiculo;
-import com.company.appMancuria.utils.Validaciones;
-import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class ClientesActivity extends AppCompatActivity {
 
@@ -114,67 +110,45 @@ public class ClientesActivity extends AppCompatActivity {
     @Override public boolean onSupportNavigateUp() { finish(); return true; }
 
     private void consultarClientes() {
-        // Quitamos el orderBy para garantizar que carguen TODOS
-        db.collection("clientes")
-                .addSnapshotListener((snap, err) -> {
-                    if (err != null) {
-                        Log.e(TAG, "Error de Firestore: " + err.getMessage(), err);
-                        Toast.makeText(this, "Error al cargar: " + err.getMessage(), Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    
-                    if (snap != null) {
-                        listaClientes.clear();
-                        for (QueryDocumentSnapshot doc : snap) {
-                            try {
-                                Cliente c = doc.toObject(Cliente.class);
-                                // Forzamos el ID real de Firestore en caso de que el campo 'id' de la DB esté vacío
-                                c.setId(doc.getId());
-                                listaClientes.add(c);
-                            } catch (Exception e) {
-                                Log.e(TAG, "Error mapeando cliente: " + doc.getId(), e);
-                            }
-                        }
-                        Log.d(TAG, "Clientes cargados: " + listaClientes.size());
-                        filtrar(""); 
-                    }
-                });
+        db.collection("clientes").addSnapshotListener((snap, err) -> {
+            if (err != null) return;
+            if (snap != null) {
+                listaClientes.clear();
+                for (QueryDocumentSnapshot doc : snap) {
+                    Cliente c = doc.toObject(Cliente.class);
+                    c.setId(doc.getId());
+                    listaClientes.add(c);
+                }
+                filtrar(""); 
+            }
+        });
     }
 
     private void mostrarDialogoNuevoCliente(Cliente clienteExistente) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_cliente, null);
         TextInputEditText etNombre  = dialogView.findViewById(R.id.etNombreCliente);
         TextInputEditText etDoc     = dialogView.findViewById(R.id.etDocumentoCliente);
+        TextInputLayout   tilDoc    = dialogView.findViewById(R.id.tilDocumentoCliente);
         TextInputEditText etTel     = dialogView.findViewById(R.id.etTelefonoCliente);
         RadioGroup        rgTipo    = dialogView.findViewById(R.id.rgTipoCliente);
         RadioButton       rbPersona = dialogView.findViewById(R.id.rbPersona);
         RadioButton       rbEmpresa = dialogView.findViewById(R.id.rbEmpresa);
 
-        // Configuración inicial de límites
-        actualizarLimiteDocumento(etDoc, rbEmpresa.isChecked());
+        actualizarEstadoDocumento(tilDoc, etDoc, rbEmpresa.isChecked());
 
         rgTipo.setOnCheckedChangeListener((group, checkedId) -> {
             boolean esEmpresa = (checkedId == R.id.rbEmpresa);
-            actualizarLimiteDocumento(etDoc, esEmpresa);
-            // Limpiar si excede el nuevo límite al cambiar
+            actualizarEstadoDocumento(tilDoc, etDoc, esEmpresa);
             String current = etDoc.getText().toString();
             int max = esEmpresa ? 11 : 8;
-            if (current.length() > max) {
-                etDoc.setText(current.substring(0, max));
-            }
+            if (current.length() > max) etDoc.setText(current.substring(0, max));
         });
 
         if (clienteExistente != null) {
             etNombre.setText(clienteExistente.getNombre());
             etDoc.setText(clienteExistente.getDocumento());
             etTel.setText(clienteExistente.getTelefono());
-            if ("Empresa".equals(clienteExistente.getTipo())) {
-                rbEmpresa.setChecked(true);
-                actualizarLimiteDocumento(etDoc, true);
-            } else {
-                rbPersona.setChecked(true);
-                actualizarLimiteDocumento(etDoc, false);
-            }
+            if ("Empresa".equals(clienteExistente.getTipo())) rbEmpresa.setChecked(true);
         }
 
         AlertDialog dialog = new AlertDialog.Builder(this)
@@ -192,48 +166,25 @@ public class ClientesActivity extends AppCompatActivity {
                 String tipo   = rbEmpresa.isChecked() ? "Empresa" : "Persona";
 
                 if (nombre.isEmpty()) { etNombre.setError("Obligatorio"); return; }
-                
-                // Validar longitud según tipo
                 int longEsperada = rbEmpresa.isChecked() ? 11 : 8;
-                if (doc.length() != longEsperada) {
-                    etDoc.setError("Debe tener " + longEsperada + " dígitos");
-                    return;
-                }
-
-                // Validar duplicados (DNI/RUC y Teléfono)
-                for (Cliente c : listaClientes) {
-                    // Si estamos editando, ignorar al propio cliente
-                    if (clienteExistente != null && c.getId().equals(clienteExistente.getId())) continue;
-
-                    if (doc.equals(c.getDocumento())) {
-                        etDoc.setError("Este documento ya existe");
-                        Toast.makeText(this, "Error: El DNI/RUC ya está registrado", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    if (!tel.isEmpty() && tel.equals(c.getTelefono())) {
-                        etTel.setError("Este teléfono ya existe");
-                        Toast.makeText(this, "Error: El teléfono ya está registrado", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                }
+                if (doc.length() != longEsperada) { etDoc.setError("Faltan dígitos"); return; }
 
                 if (clienteExistente != null) {
                     db.collection("clientes").document(clienteExistente.getId())
                             .update("nombre", nombre, "documento", doc, "tipo", tipo, "telefono", tel)
                             .addOnSuccessListener(v -> dialog.dismiss());
                 } else {
-                    Cliente nuevo = new Cliente(doc, nombre, tipo, tel, "");
-                    db.collection("clientes").add(nuevo).addOnSuccessListener(ref -> dialog.dismiss());
+                    db.collection("clientes").add(new Cliente(doc, nombre, tipo, tel, "")).addOnSuccessListener(ref -> dialog.dismiss());
                 }
             });
         });
         dialog.show();
     }
 
-    private void actualizarLimiteDocumento(TextInputEditText et, boolean esEmpresa) {
+    private void actualizarEstadoDocumento(TextInputLayout til, TextInputEditText et, boolean esEmpresa) {
         int limite = esEmpresa ? 11 : 8;
         et.setFilters(new InputFilter[]{new InputFilter.LengthFilter(limite)});
-        et.setHint(esEmpresa ? "RUC (11 dígitos)" : "DNI (8 dígitos)");
+        til.setHint(esEmpresa ? "RUC (11 dígitos)" : "DNI (8 dígitos)");
     }
 
     private void mostrarDetalleCliente(Cliente cliente) {
@@ -250,7 +201,8 @@ public class ClientesActivity extends AppCompatActivity {
                 .addOnSuccessListener(snap -> {
                     List<String> items = new ArrayList<>();
                     for (DocumentSnapshot doc : snap.getDocuments()) {
-                        items.add(doc.getString("placa") + " — " + doc.getString("marca"));
+                        Vehiculo v = doc.toObject(Vehiculo.class);
+                        if (v != null) items.add(v.getDescripcionCorta());
                     }
                     items.add("➕ Agregar vehículo");
                     new AlertDialog.Builder(this).setTitle("Vehículos")
@@ -262,13 +214,49 @@ public class ClientesActivity extends AppCompatActivity {
 
     private void mostrarDialogoNuevoVehiculo(Cliente cliente) {
         View v = LayoutInflater.from(this).inflate(R.layout.dialog_vehiculo, null);
-        TextInputEditText etPlaca  = v.findViewById(R.id.etPlacaVehiculo);
+        TextInputEditText etPlaca = v.findViewById(R.id.etPlacaVehiculo);
+        TextInputEditText etMarca = v.findViewById(R.id.etMarcaVehiculo);
+        TextInputEditText etModelo = v.findViewById(R.id.etModeloVehiculo);
+        TextInputEditText etAnio = v.findViewById(R.id.etAnioVehiculo);
+        TextInputEditText etColor = v.findViewById(R.id.etColorVehiculo);
+        TextInputEditText etVin = v.findViewById(R.id.etVinVehiculo);
+
+        etPlaca.addTextChangedListener(new TextWatcher() {
+            private boolean isUpdating = false;
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(Editable s) {
+                if (isUpdating) return;
+                isUpdating = true;
+                String text = s.toString().toUpperCase().replace("-", "");
+                if (text.length() > 3) text = text.substring(0, 3) + "-" + text.substring(3);
+                etPlaca.setText(text);
+                etPlaca.setSelection(text.length());
+                isUpdating = false;
+            }
+        });
+
         new AlertDialog.Builder(this).setTitle("Nuevo vehículo").setView(v)
                 .setPositiveButton("Guardar", (d, w) -> {
-                    Vehiculo veh = new Vehiculo(etPlaca.getText().toString().trim().toUpperCase(), "", "", 0, "", "", cliente.getId());
+                    String placa = etPlaca.getText().toString().trim().toUpperCase();
+                    String marca = etMarca.getText().toString().trim();
+                    String modelo = etModelo.getText().toString().trim();
+                    int anio = etAnio.getText().toString().isEmpty() ? 0 : Integer.parseInt(etAnio.getText().toString());
+                    String color = etColor.getText().toString().trim();
+                    String vin = etVin.getText().toString().trim();
+                    
+                    if (placa.isEmpty()) return;
+
+                    Vehiculo veh = new Vehiculo(placa, marca, modelo, anio, color, vin, cliente.getId());
                     db.collection("clientes").document(cliente.getId()).collection("vehiculos").add(veh)
                             .addOnSuccessListener(ref -> {
-                                db.collection("clientes").document(cliente.getId()).update("cantidadVehiculos", listaClientes.size());
+                                // Actualizar contador real de vehículos
+                                db.collection("clientes").document(cliente.getId()).collection("vehiculos").get()
+                                        .addOnSuccessListener(snapCount -> {
+                                            db.collection("clientes").document(cliente.getId())
+                                                    .update("cantidadVehiculos", snapCount.size());
+                                            Toast.makeText(this, "Vehículo registrado", Toast.LENGTH_SHORT).show();
+                                        });
                             });
                 }).show();
     }

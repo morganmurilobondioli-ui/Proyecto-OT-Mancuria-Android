@@ -40,11 +40,12 @@
             android:buttonTint="#db2d2c"/>
     </RadioGroup>
 
+    <!-- Se añadió el id tilDocumentoCliente y se quitó el hint fijo -->
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilDocumentoCliente"
         style="@style/InputRojo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="DNI / RUC *"
         android:layout_marginBottom="12dp">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etDocumentoCliente"
