@@ -1,23 +1,24 @@
 package com.company.appMancuria.models;
 
+import com.google.firebase.firestore.IgnoreExtraProperties;
+
+@IgnoreExtraProperties
 public class Usuario {
     private String id;
     private String nombre;
     private String correo; // Ahora actuará como login o correo de referencia
-    private String usuario; // Nuevo: Nombre de usuario único para login
-    private String password; // Nuevo: Contraseña
+    private String usuario;
     private String fotoUrl;
     private String rol;
     private String estado; // "activo" o "suspendido"
 
     public Usuario() {}
 
-    public Usuario(String id, String nombre, String correo, String usuario, String password, String fotoUrl, String rol, String estado) {
+    public Usuario(String id, String nombre, String correo, String usuario, String fotoUrl, String rol, String estado) {
         this.id = id;
         this.nombre = nombre;
         this.correo = correo;
         this.usuario = usuario;
-        this.password = password;
         this.fotoUrl = fotoUrl;
         this.rol = rol;
         this.estado = estado;
@@ -34,9 +35,6 @@ public class Usuario {
 
     public String getUsuario() { return usuario; }
     public void setUsuario(String usuario) { this.usuario = usuario; }
-
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
 
     public String getFotoUrl() { return fotoUrl; }
     public void setFotoUrl(String fotoUrl) { this.fotoUrl = fotoUrl; }

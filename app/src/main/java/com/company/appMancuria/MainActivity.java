@@ -55,7 +55,8 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
         currentUserId = prefs.getString("userId", null);
 
-        if (currentUserId == null) {
+        if (currentUserId == null || FirebaseAuth.getInstance().getCurrentUser() == null) {
+            prefs.edit().clear().apply();
             irALogin();
             return;
         }

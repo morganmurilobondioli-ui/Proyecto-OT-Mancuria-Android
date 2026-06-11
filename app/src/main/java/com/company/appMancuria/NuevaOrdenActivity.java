@@ -2,11 +2,12 @@ package com.company.appMancuria;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
-import android.text.TextUtils;
+import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -15,6 +16,8 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -284,9 +287,6 @@ public class NuevaOrdenActivity extends AppCompatActivity {
             return; 
         }
 
-        // Unir todos los servicios en un solo string separado por saltos de línea para el campo fallaReportada
-        String serviciosUnidos = TextUtils.join("\n", serviciosSeleccionados);
-        
         String kmStr = etKilometraje.getText().toString().trim();
         int km = kmStr.isEmpty() ? 0 : Integer.parseInt(kmStr);
         
@@ -298,7 +298,20 @@ public class NuevaOrdenActivity extends AppCompatActivity {
 
         double monto = etMonto.getText().toString().trim().isEmpty() ? 0.0 : Double.parseDouble(etMonto.getText().toString().trim());
 
-        OrdenTrabajo orden = new OrdenTrabajo(selectedClienteId, selectedClienteNombre, selectedVehiculoId, selectedPlaca, selectedMarcaModelo, serviciosUnidos, monto, km);
+        OrdenTrabajo orden = new OrdenTrabajo(
+                selectedClienteId,
+                selectedClienteNombre,
+                selectedVehiculoId,
+                selectedPlaca,
+                selectedMarcaModelo,
+                new ArrayList<>(serviciosSeleccionados),
+                monto,
+                km
+        );
+
+        SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
+        orden.setCreadoPorId(prefs.getString("userId", ""));
+        orden.setCreadoPorNombre(prefs.getString("userNombre", "Usuario"));
         
         // Guardar la OT y actualizar el último kilometraje en el vehículo
         db.collection("ordenes_trabajo").add(orden).addOnSuccessListener(ref -> {
@@ -320,11 +333,72 @@ public class NuevaOrdenActivity extends AppCompatActivity {
         View v = LayoutInflater.from(this).inflate(R.layout.dialog_cliente, null);
         TextInputEditText etNombre = v.findViewById(R.id.etNombreCliente);
         TextInputEditText etDoc = v.findViewById(R.id.etDocumentoCliente);
-        new AlertDialog.Builder(this).setTitle("Nuevo cliente").setView(v).setPositiveButton("Guardar", (d, w) -> {
-            String nombre = etNombre.getText().toString().trim();
-            String doc = etDoc.getText().toString().trim();
-            if(!nombre.isEmpty()) db.collection("clientes").add(new Cliente(doc, nombre, "Persona", "", ""));
-        }).show();
+        TextInputLayout tilDoc = v.findViewById(R.id.tilDocumentoCliente);
+        TextInputEditText etTel = v.findViewById(R.id.etTelefonoCliente);
+        TextInputEditText etCorreo = v.findViewById(R.id.etCorreoCliente);
+        RadioGroup rgTipo = v.findViewById(R.id.rgTipoCliente);
+        RadioButton rbEmpresa = v.findViewById(R.id.rbEmpresa);
+
+        actualizarEstadoDocumento(tilDoc, etDoc, rbEmpresa.isChecked());
+
+        rgTipo.setOnCheckedChangeListener((group, checkedId) -> {
+            boolean esEmpresa = (checkedId == R.id.rbEmpresa);
+            actualizarEstadoDocumento(tilDoc, etDoc, esEmpresa);
+            String current = etDoc.getText().toString();
+            int max = esEmpresa ? 11 : 8;
+            if (current.length() > max) etDoc.setText(current.substring(0, max));
+        });
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Nuevo cliente")
+                .setView(v)
+                .setPositiveButton("Guardar", null)
+                .setNegativeButton("Cancelar", null)
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+                String nombre = etNombre.getText().toString().trim();
+                String doc = etDoc.getText().toString().trim();
+                String tel = etTel.getText().toString().trim();
+                String correo = etCorreo.getText().toString().trim();
+                String tipo = rbEmpresa.isChecked() ? "Empresa" : "Persona";
+
+                if (nombre.isEmpty()) {
+                    etNombre.setError("Obligatorio");
+                    return;
+                }
+                int longEsperada = rbEmpresa.isChecked() ? 11 : 8;
+                if (doc.length() != longEsperada) {
+                    etDoc.setError("Faltan dígitos");
+                    return;
+                }
+
+                Cliente nuevoCliente = new Cliente(doc, nombre, tipo, tel, correo);
+                db.collection("clientes").add(nuevoCliente).addOnSuccessListener(ref -> {
+                    // Auto-seleccionar el cliente recién creado
+                    String item = nombre + (doc.isEmpty() ? "" : " (" + doc + ")");
+                    selectedClienteId = ref.getId();
+                    selectedClienteNombre = nombre;
+                    actvCliente.setText(item, false);
+
+                    actvVehiculo.setText("");
+                    selectedVehiculoId = null;
+                    desactivarSeccion(3);
+                    cargarVehiculos(selectedClienteId);
+
+                    Toast.makeText(this, "Cliente registrado y seleccionado", Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                });
+            });
+        });
+        dialog.show();
+    }
+
+    private void actualizarEstadoDocumento(TextInputLayout til, TextInputEditText et, boolean esEmpresa) {
+        int limite = esEmpresa ? 11 : 8;
+        et.setFilters(new InputFilter[]{new InputFilter.LengthFilter(limite)});
+        til.setHint(esEmpresa ? "RUC (11 dígitos)" : "DNI (8 dígitos)");
     }
 
     private void mostrarDialogoNuevoVehiculo() {
@@ -336,26 +410,70 @@ public class NuevaOrdenActivity extends AppCompatActivity {
         TextInputEditText etColor = v.findViewById(R.id.etColorVehiculo);
         TextInputEditText etVin = v.findViewById(R.id.etVinVehiculo);
 
-        new AlertDialog.Builder(this).setTitle("Nuevo vehículo").setView(v).setPositiveButton("Guardar", (d, w) -> {
-            String placa = etPlaca.getText().toString().trim().toUpperCase();
-            String marca = etMarca.getText().toString().trim();
-            String modelo = etModelo.getText().toString().trim();
-            int anio = etAnio.getText().toString().isEmpty() ? 0 : Integer.parseInt(etAnio.getText().toString());
-            String color = etColor.getText().toString().trim();
-            String vin = etVin.getText().toString().trim();
+        etPlaca.addTextChangedListener(new TextWatcher() {
+            private boolean isUpdating = false;
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(Editable s) {
+                if (isUpdating) return;
+                isUpdating = true;
+                String text = s.toString().toUpperCase().replace("-", "");
+                if (text.length() > 3) text = text.substring(0, 3) + "-" + text.substring(3);
+                etPlaca.setText(text);
+                etPlaca.setSelection(text.length());
+                isUpdating = false;
+            }
+        });
 
-            if (!placa.isEmpty()) {
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Nuevo vehículo")
+                .setView(v)
+                .setPositiveButton("Guardar", null)
+                .setNegativeButton("Cancelar", null)
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+                String placa = etPlaca.getText().toString().trim().toUpperCase();
+                String marca = etMarca.getText().toString().trim();
+                String modelo = etModelo.getText().toString().trim();
+                int anio = etAnio.getText().toString().isEmpty() ? 0 : Integer.parseInt(etAnio.getText().toString());
+                String color = etColor.getText().toString().trim();
+                String vin = etVin.getText().toString().trim();
+
+                if (placa.isEmpty()) {
+                    etPlaca.setError("Obligatorio");
+                    return;
+                }
+
                 Vehiculo veh = new Vehiculo(placa, marca, modelo, anio, color, vin, selectedClienteId);
                 db.collection("clientes").document(selectedClienteId).collection("vehiculos").add(veh)
-                    .addOnSuccessListener(ref -> {
-                        // Actualizar contador del cliente
-                        db.collection("clientes").document(selectedClienteId).collection("vehiculos").get()
-                                .addOnSuccessListener(snapCount -> {
-                                    db.collection("clientes").document(selectedClienteId).update("cantidadVehiculos", snapCount.size());
-                                    Toast.makeText(this, "Vehículo registrado", Toast.LENGTH_SHORT).show();
-                                });
-                    });
-            }
-        }).show();
+                        .addOnSuccessListener(ref -> {
+                            // Actualizar contador del cliente
+                            db.collection("clientes").document(selectedClienteId).collection("vehiculos").get()
+                                    .addOnSuccessListener(snapCount -> {
+                                        db.collection("clientes").document(selectedClienteId).update("cantidadVehiculos", snapCount.size());
+
+                                        // Auto-seleccionar el vehículo recién creado
+                                        selectedVehiculoId = ref.getId();
+                                        ultimoKilometrajeVehiculo = 0;
+
+                                        String desc = veh.getDescripcionCorta();
+                                        actvVehiculo.setText(desc, false);
+
+                                        etKilometraje.setHint("Anterior: 0 km");
+                                        etKilometraje.setText("0");
+
+                                        selectedPlaca = placa;
+                                        selectedMarcaModelo = (marca + " " + modelo).trim();
+
+                                        activarSeccion(3);
+                                        Toast.makeText(this, "Vehículo registrado y seleccionado", Toast.LENGTH_SHORT).show();
+                                        dialog.dismiss();
+                                    });
+                        });
+            });
+        });
+        dialog.show();
     }
 }

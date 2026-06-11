@@ -122,7 +122,7 @@
                             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Nombre de Usuario"
+                            android:hint="Correo de acceso"
                             app:boxStrokeColor="#db2d2c"
                             app:hintTextColor="#db2d2c"
                             app:startIconDrawable="@drawable/ic_person"
@@ -138,7 +138,7 @@
                                 android:layout_height="56dp"
                                 android:textColor="#212121"
                                 android:textSize="15sp"
-                                android:inputType="text"
+                                android:inputType="textEmailAddress"
                                 android:imeOptions="actionNext"/>
                         </com.google.android.material.textfield.TextInputLayout>
 

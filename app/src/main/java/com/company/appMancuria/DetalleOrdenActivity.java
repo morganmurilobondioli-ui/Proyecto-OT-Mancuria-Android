@@ -310,7 +310,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         btnActualizar.setEnabled(false);
         
         db.collection("ordenes_trabajo").document(ordenId)
-                .update("fallareportada", servicio,
+                .update("fallareportada", parseServiciosDesdeTexto(servicio),
                         "trabajoRealizado", trabajo, 
                         "kilometraje", km, 
                         "montoTotal", monto,
@@ -322,5 +322,18 @@ public class DetalleOrdenActivity extends AppCompatActivity {
                     btnActualizar.setEnabled(true);
                     Toast.makeText(this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private List<String> parseServiciosDesdeTexto(String texto) {
+        List<String> servicios = new ArrayList<>();
+        if (texto == null || texto.trim().isEmpty()) return servicios;
+
+        for (String item : texto.split("\\r?\\n")) {
+            String servicio = item.trim();
+            if (!servicio.isEmpty() && !servicios.contains(servicio)) {
+                servicios.add(servicio);
+            }
+        }
+        return servicios;
     }
 }

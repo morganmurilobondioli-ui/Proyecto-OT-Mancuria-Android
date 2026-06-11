@@ -230,14 +230,15 @@ public class AdminPanelActivity extends AppCompatActivity {
     private void mostrarDialogoUsuario(Usuario usuarioExistente) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_usuario, null);
         TextInputEditText etNombre = dialogView.findViewById(R.id.etNombreUsuario);
-        TextInputEditText etLogin  = dialogView.findViewById(R.id.etUserLogin);
-        TextInputEditText etPass   = dialogView.findViewById(R.id.etPasswordUsuario);
+        TextInputEditText etCorreo = dialogView.findViewById(R.id.etUserLogin);
+        TextInputEditText etUid = dialogView.findViewById(R.id.etPasswordUsuario);
         RadioButton rbAdmin = dialogView.findViewById(R.id.rbAdmin);
 
         if (usuarioExistente != null) {
             etNombre.setText(usuarioExistente.getNombre());
-            etLogin.setText(usuarioExistente.getUsuario());
-            etPass.setText(usuarioExistente.getPassword());
+            etCorreo.setText(usuarioExistente.getCorreo());
+            etUid.setText(usuarioExistente.getId());
+            etUid.setEnabled(false);
             if ("admin".equals(usuarioExistente.getRol())) rbAdmin.setChecked(true);
         }
 
@@ -251,21 +252,23 @@ public class AdminPanelActivity extends AppCompatActivity {
         dialog.setOnShowListener(d -> {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
                 String nombre = etNombre.getText().toString().trim();
-                String login  = etLogin.getText().toString().trim();
-                String pass   = etPass.getText().toString().trim();
+                String correo = etCorreo.getText().toString().trim();
+                String uid = etUid.getText().toString().trim();
                 String rol    = rbAdmin.isChecked() ? "admin" : "mecanico";
 
-                if (nombre.isEmpty() || login.isEmpty() || pass.isEmpty()) return;
+                if (nombre.isEmpty()) { etNombre.setError("Obligatorio"); return; }
+                if (correo.isEmpty()) { etCorreo.setError("Obligatorio"); return; }
+                if (uid.isEmpty()) { etUid.setError("UID requerido"); return; }
 
                 if (usuarioExistente == null) {
-                    Usuario nuevo = new Usuario(null, nombre, "", login, pass, "", rol, "activo");
-                    db.collection("usuarios").add(nuevo).addOnSuccessListener(ref -> {
+                    Usuario nuevo = new Usuario(uid, nombre, correo, correo, "", rol, "activo");
+                    db.collection("usuarios").document(uid).set(nuevo).addOnSuccessListener(ref -> {
                         Toast.makeText(this, "Trabajador creado", Toast.LENGTH_SHORT).show();
                         dialog.dismiss();
                     });
                 } else {
                     db.collection("usuarios").document(usuarioExistente.getId())
-                            .update("nombre", nombre, "usuario", login, "password", pass, "rol", rol)
+                            .update("nombre", nombre, "correo", correo, "usuario", correo, "rol", rol)
                             .addOnSuccessListener(ref -> {
                                 Toast.makeText(this, "Trabajador actualizado", Toast.LENGTH_SHORT).show();
                                 dialog.dismiss();
