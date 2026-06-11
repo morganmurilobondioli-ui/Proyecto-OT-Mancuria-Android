@@ -4,6 +4,7 @@ import com.google.firebase.firestore.IgnoreExtraProperties;
 
 @IgnoreExtraProperties
 public class Usuario {
+    // Modelo Firestore del trabajador: Auth valida credenciales; este objeto guarda perfil, rol y estado.
     private String id;
     private String nombre;
     private String correo; // Ahora actuará como login o correo de referencia
@@ -12,8 +13,10 @@ public class Usuario {
     private String rol;
     private String estado; // "activo" o "suspendido"
 
+    // Constructor vacio requerido por Firestore para convertir documentos en objetos Usuario.
     public Usuario() {}
 
+    // Constructor usado al crear un trabajador desde el panel de administracion.
     public Usuario(String id, String nombre, String correo, String usuario, String fotoUrl, String rol, String estado) {
         this.id = id;
         this.nombre = nombre;
@@ -24,6 +27,7 @@ public class Usuario {
         this.estado = estado;
     }
 
+    // Getters y setters permiten que Firestore lea/escriba campos y que otras clases accedan al modelo.
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 

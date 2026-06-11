@@ -48,6 +48,8 @@ public class PerfilActivity extends AppCompatActivity {
     private Uri selectedPhotoUri;
     private String fotoUrlActual = "";
 
+    // Launcher moderno para pedir una imagen al sistema sin usar onActivityResult antiguo.
+    // Cuando el usuario elige foto, se guarda su Uri temporal y se muestra con Glide.
     private final ActivityResultLauncher<String> imagePicker =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
@@ -72,6 +74,7 @@ public class PerfilActivity extends AppCompatActivity {
         storage = FirebaseStorage.getInstance();
         currentUser = auth.getCurrentUser();
 
+        // Perfil solo tiene sentido si hay un usuario autenticado en FirebaseAuth.
         if (currentUser == null) {
             finish();
             return;
@@ -125,7 +128,10 @@ public class PerfilActivity extends AppCompatActivity {
         btnCambiarFoto = findViewById(R.id.btnCambiarFoto);
         btnGuardar = findViewById(R.id.btnGuardarPerfil);
 
+        // Abre el selector de imagenes. La foto aun no se sube; solo se selecciona.
         btnCambiarFoto.setOnClickListener(v -> imagePicker.launch("image/*"));
+
+        // Guarda nombre/foto y, si el usuario escribio nueva password, tambien cambia password.
         btnGuardar.setOnClickListener(v -> guardarCambios());
         etPasswordActual.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) scrollToSaveButton();
@@ -158,8 +164,10 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     private void cargarPerfil() {
+        // El correo viene de FirebaseAuth porque es parte de la cuenta real de autenticacion.
         etCorreo.setText(currentUser.getEmail() != null ? currentUser.getEmail() : "");
 
+        // Nombre y foto vienen de Firestore porque son datos de perfil de negocio/UI.
         db.collection("usuarios").document(currentUser.getUid()).get()
                 .addOnSuccessListener(doc -> {
                     if (!doc.exists()) return;
@@ -180,10 +188,12 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     private void guardarCambios() {
+        // Lee valores actuales de la pantalla.
         String nombre = etNombre.getText().toString().trim();
         String passwordActual = etPasswordActual.getText().toString().trim();
         String nuevaPassword = etPassword.getText().toString().trim();
 
+        // Validaciones locales antes de tocar Firebase.
         if (nombre.isEmpty()) {
             etNombre.setError("Obligatorio");
             return;
@@ -198,6 +208,9 @@ public class PerfilActivity extends AppCompatActivity {
         }
 
         btnGuardar.setEnabled(false);
+
+        // Si hay foto nueva, primero se sube a Storage y luego se guarda el perfil con la URL.
+        // Si no hay foto nueva, se guarda directamente el perfil.
         if (selectedPhotoUri != null) {
             subirFotoYGuardar(nombre, passwordActual, nuevaPassword);
         } else {
@@ -206,11 +219,13 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     private void subirFotoYGuardar(String nombre, String passwordActual, String nuevaPassword) {
+        // Ruta donde queda la foto del usuario en Firebase Storage.
         StorageReference ref = storage.getReference()
                 .child("usuarios")
                 .child(currentUser.getUid())
                 .child("perfil.jpg");
 
+        // putFile sube el archivo; continueWithTask encadena la obtencion de la URL publica/descargable.
         ref.putFile(selectedPhotoUri)
                 .continueWithTask(task -> {
                     if (!task.isSuccessful() && task.getException() != null) {
@@ -226,10 +241,12 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     private void guardarPerfil(String nombre, String fotoUrl, String passwordActual, String nuevaPassword) {
+        // Datos que se guardan en Firestore. Aqui no se guarda la password.
         Map<String, Object> data = new HashMap<>();
         data.put("nombre", nombre);
         data.put("fotoUrl", fotoUrl != null ? fotoUrl : "");
 
+        // Actualiza el documento usuarios/{uid}. Al terminar, sincroniza SharedPreferences.
         db.collection("usuarios").document(currentUser.getUid())
                 .update(data)
                 .addOnSuccessListener(v -> {
@@ -243,6 +260,7 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     private void actualizarPasswordSiCorresponde(String passwordActual, String nuevaPassword) {
+        // Si el campo nueva password esta vacio, solo se actualizo nombre/foto.
         if (nuevaPassword.isEmpty()) {
             btnGuardar.setEnabled(true);
             Toast.makeText(this, "Perfil actualizado", Toast.LENGTH_SHORT).show();
@@ -250,6 +268,7 @@ public class PerfilActivity extends AppCompatActivity {
             return;
         }
 
+        // Firebase requiere reautenticacion para operaciones sensibles como cambiar password.
         String email = currentUser.getEmail();
         if (email == null || email.isEmpty()) {
             btnGuardar.setEnabled(true);
@@ -257,8 +276,12 @@ public class PerfilActivity extends AppCompatActivity {
             return;
         }
 
+        // Se reconstruye una credencial con el email actual y la password actual escrita por el usuario.
         AuthCredential credential = EmailAuthProvider.getCredential(email, passwordActual);
+
+        // Paso 1: confirmar que la password actual es correcta.
         currentUser.reauthenticate(credential)
+                // Paso 2: si la reautenticacion fue correcta, Firebase permite cambiar la password.
                 .addOnSuccessListener(v -> currentUser.updatePassword(nuevaPassword)
                         .addOnSuccessListener(ok -> {
                             btnGuardar.setEnabled(true);
@@ -276,6 +299,7 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     private void volverAPrincipal() {
+        // Vuelve a MainActivity sin duplicar muchas pantallas en el back stack.
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         startActivity(intent);
@@ -283,6 +307,7 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     private void guardarPrefs(String nombre, String fotoUrl) {
+        // Actualiza cache local para que MainActivity muestre el nombre/foto nuevos al volver.
         SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
         prefs.edit()
                 .putString("userNombre", nombre)

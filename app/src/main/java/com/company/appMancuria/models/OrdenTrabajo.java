@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class OrdenTrabajo {
+    // Campos principales que representan una orden de trabajo en Firestore.
+    // Se inicializan con valores seguros para evitar NullPointerException en la UI.
     private String id = "";
     private String clienteId = "";
     private String clienteNombre = "";
@@ -14,6 +16,10 @@ public class OrdenTrabajo {
     private String marcaModelo = "";
     private String creadoPorId = "";
     private String creadoPorNombre = "";
+
+    // Este campo interno se maneja como lista en Java. El @Exclude evita que
+    // Firestore lo duplique con el nombre "fallasReportadas"; mas abajo se
+    // mapea explicitamente al campo real "fallareportada".
     @Exclude
     private List<String> fallasReportadas = new ArrayList<>();
     
@@ -26,8 +32,11 @@ public class OrdenTrabajo {
     private List<PiezaUsada> piezasUsadas = new ArrayList<>();
     private List<LogEntrada> historial = new ArrayList<>();
 
+    // Constructor vacio requerido por Firestore para convertir documentos en objetos Java.
     public OrdenTrabajo() {}
 
+    // Constructor de compatibilidad: permite crear una orden desde un texto antiguo
+    // y convertirlo internamente al formato nuevo de lista.
     public OrdenTrabajo(String clienteId, String clienteNombre, String vehiculoId,
                         String placa, String marcaModelo, String fallaReportada,
                         double montoTotal, int kilometraje) {
@@ -35,6 +44,8 @@ public class OrdenTrabajo {
                 normalizarFallas(fallaReportada), montoTotal, kilometraje);
     }
 
+    // Constructor principal usado por la app nueva: recibe varias fallas/servicios
+    // como lista y deja la orden lista para guardarse en Firestore.
     public OrdenTrabajo(String clienteId, String clienteNombre, String vehiculoId,
                         String placa, String marcaModelo, List<String> fallasReportadas,
                         double montoTotal, int kilometraje) {
@@ -51,6 +62,7 @@ public class OrdenTrabajo {
         this.kilometraje    = kilometraje;
     }
 
+    // Entrada de bitacora: cada cambio importante en la orden queda registrado.
     public static class LogEntrada {
         public String fecha;
         public String usuario;
@@ -64,6 +76,8 @@ public class OrdenTrabajo {
         }
     }
 
+    // Pieza usada en la reparacion. Es una clase interna porque solo tiene sentido
+    // dentro de una orden de trabajo.
     public static class PiezaUsada {
         private String nombre = "";
         private int cantidad = 1;
@@ -116,31 +130,37 @@ public class OrdenTrabajo {
     public String getCreadoPorNombre() { return creadoPorNombre != null ? creadoPorNombre : ""; }
     public void setCreadoPorNombre(String nombre) { this.creadoPorNombre = nombre; }
 
+    // Getter de lectura para pantallas antiguas: convierte la lista en texto multilinea.
     @Exclude
     public String getFallaReportada() {
         return String.join("\n", getFallasReportadas());
     }
 
+    // Setter de compatibilidad: acepta texto y lo normaliza a lista.
     @Exclude
     public void setFallaReportada(String f) {
         this.fallasReportadas = normalizarFallas(f);
     }
 
+    // Getter interno recomendado: devuelve siempre una lista, aunque el campo sea null.
     @Exclude
     public List<String> getFallasReportadas() {
         return fallasReportadas != null ? fallasReportadas : new ArrayList<>();
     }
 
+    // Setter interno recomendado: limpia la lista antes de guardarla en memoria.
     @Exclude
     public void setFallasReportadas(List<String> fallas) {
         this.fallasReportadas = normalizarFallas(fallas);
     }
 
+    // Firestore guardara/leyera esta propiedad con el nombre exacto "fallareportada".
     @PropertyName("fallareportada")
     public List<String> getFallasReportadasFirestore() {
         return getFallasReportadas();
     }
 
+    // Firestore puede entregar una lista nueva o un string viejo; por eso recibe Object.
     @PropertyName("fallareportada")
     public void setFallasReportadasFirestore(Object value) {
         this.fallasReportadas = normalizarFallas(value);
@@ -152,6 +172,7 @@ public class OrdenTrabajo {
     public String getEstado() { return estado != null ? estado : "Pendiente"; }
     public void setEstado(String e) { this.estado = e; }
 
+    // Si hay datos antiguos sin montoManoObra, intenta reconstruirlo desde montoTotal.
     public double getMontoManoObra() {
         if (montoManoObra > 0) return montoManoObra;
 
@@ -180,6 +201,7 @@ public class OrdenTrabajo {
         this.piezasUsadas = piezasUsadas != null ? piezasUsadas : new ArrayList<>();
     }
 
+    // Campo calculado: no se persiste porque depende de la lista piezasUsadas.
     @Exclude
     public double getTotalPiezas() {
         double total = 0.0;
@@ -192,6 +214,8 @@ public class OrdenTrabajo {
     public List<LogEntrada> getHistorial() { return historial; }
     public void setHistorial(List<LogEntrada> h) { this.historial = h; }
 
+    // Normaliza datos de entrada para que la app trabaje siempre con List<String>.
+    // Acepta null, List, texto simple o texto multilinea.
     private static List<String> normalizarFallas(Object value) {
         List<String> resultado = new ArrayList<>();
         if (value == null) return resultado;
@@ -214,6 +238,7 @@ public class OrdenTrabajo {
         return resultado;
     }
 
+    // Agrega solo valores reales: sin espacios vacios y sin duplicados.
     private static void agregarFallaNormalizada(List<String> destino, String falla) {
         String limpia = falla != null ? falla.trim() : "";
         if (!limpia.isEmpty() && !destino.contains(limpia)) {

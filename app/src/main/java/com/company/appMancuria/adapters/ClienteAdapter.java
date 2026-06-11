@@ -16,8 +16,8 @@ import java.util.List;
 
 public class ClienteAdapter extends RecyclerView.Adapter<ClienteAdapter.ViewHolder> {
 
-    public interface OnItemClickListener { void onItemClick(Cliente cliente); }
-
+    public interface OnItemClickListener { void onItemClick(Cliente cliente); } //un contrato donde escuchamos al item
+    //recibimos un objeto cliente como parametro
     private final List<Cliente> lista;
     private final OnItemClickListener listener;
 

@@ -55,9 +55,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Recupera el usuario cacheado en el telefono despues de un login exitoso.
         SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
         currentUserId = prefs.getString("userId", null);
 
+        // Doble validacion de sesion: debe existir cache local y tambien usuario activo en FirebaseAuth.
         if (currentUserId == null || FirebaseAuth.getInstance().getCurrentUser() == null) {
             prefs.edit().clear().apply();
             irALogin();
@@ -236,6 +238,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void obtenerRolUsuario() {
+        // El rol no se confia solo desde SharedPreferences: se vuelve a leer desde Firestore.
         db.collection("usuarios").document(currentUserId).get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
@@ -244,6 +247,8 @@ public class MainActivity extends AppCompatActivity {
 
                         String estado = doc.getString("estado");
                         if ("suspendido".equals(estado)) {
+                            // Si el admin suspendio la cuenta mientras estaba logueada,
+                            // la app fuerza salida al volver a consultar el perfil.
                             mostrarBloqueoSuspension();
                             return;
                         }
@@ -254,6 +259,7 @@ public class MainActivity extends AppCompatActivity {
                         if (fotoUrl == null) fotoUrl = "";
 
                         getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE).edit()
+                                // Cache local para pintar rapido la barra superior y mostrar menu correcto.
                                 .putString("userNombre", nombre)
                                 .putString("userFotoUrl", fotoUrl)
                                 .putString("userRol", userRol)

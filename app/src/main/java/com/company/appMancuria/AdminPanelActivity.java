@@ -95,6 +95,8 @@ public class AdminPanelActivity extends AppCompatActivity {
         rvServicios = findViewById(R.id.rvServicios);
         
         findViewById(R.id.btnEditarEmpresaPdf).setOnClickListener(v -> mostrarDialogoEmpresa());
+        // Crear trabajador desde el panel admin. Se pasa null porque no existe usuario previo:
+        // el mismo dialogo sirve para crear o editar segun este parametro.
         findViewById(R.id.fabNuevoUsuario).setOnClickListener(v -> mostrarDialogoUsuario(null));
         findViewById(R.id.btnNuevoServicio).setOnClickListener(v -> mostrarDialogoServicio(null));
     }
@@ -297,12 +299,17 @@ public class AdminPanelActivity extends AppCompatActivity {
     }
 
     private void consultarTrabajadores() {
+        // Escucha en tiempo real la coleccion usuarios. Si otro cambio ocurre en Firestore,
+        // la lista de trabajadores se refresca automaticamente.
         db.collection("usuarios").addSnapshotListener((snap, err) -> {
             if (err != null) return;
             if (snap != null) {
                 listaTrabajadores.clear();
                 for (QueryDocumentSnapshot doc : snap) {
+                    // Firestore transforma cada documento en un objeto Usuario.
                     Usuario u = doc.toObject(Usuario.class);
+
+                    // El ID real del trabajador es el ID del documento, que coincide con el UID de Auth.
                     u.setId(doc.getId());
                     if (u.getEstado() == null) u.setEstado("activo");
                     listaTrabajadores.add(u);
@@ -313,6 +320,8 @@ public class AdminPanelActivity extends AppCompatActivity {
     }
 
     private void mostrarDialogoUsuario(Usuario usuarioExistente) {
+        // Si usuarioExistente == null, el dialogo crea un trabajador nuevo.
+        // Si usuarioExistente != null, el dialogo edita nombre/correo/rol de ese trabajador.
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_usuario, null);
         TextInputEditText etNombre = dialogView.findViewById(R.id.etNombreUsuario);
         TextInputEditText etCorreo = dialogView.findViewById(R.id.etUserLogin);
@@ -320,6 +329,8 @@ public class AdminPanelActivity extends AppCompatActivity {
         RadioButton rbAdmin = dialogView.findViewById(R.id.rbAdmin);
 
         if (usuarioExistente != null) {
+            // Modo editar: se cargan datos existentes y se bloquea el campo password.
+            // Cambiar password de otro usuario no se hace aqui; se usa recuperacion por correo o perfil propio.
             etNombre.setText(usuarioExistente.getNombre());
             etCorreo.setText(usuarioExistente.getCorreo());
             etPasswordTemporal.setText("");
@@ -342,16 +353,20 @@ public class AdminPanelActivity extends AppCompatActivity {
                 String passwordTemporal = etPasswordTemporal.getText().toString().trim();
                 String rol    = rbAdmin.isChecked() ? "admin" : "mecanico";
 
+                // Validaciones minimas antes de llamar a Firebase.
                 if (nombre.isEmpty()) { etNombre.setError("Obligatorio"); return; }
                 if (correo.isEmpty()) { etCorreo.setError("Obligatorio"); return; }
 
                 if (usuarioExistente == null) {
+                    // Modo crear: Firebase Auth exige password minimo de 6 caracteres.
                     if (passwordTemporal.length() < 6) {
                         etPasswordTemporal.setError("Minimo 6 caracteres");
                         return;
                     }
                     crearTrabajadorAuth(nombre, correo, passwordTemporal, rol, dialog);
                 } else {
+                    // Modo editar: solo actualiza el perfil interno en Firestore.
+                    // Ojo: esto no cambia el email de FirebaseAuth, solo el documento "usuarios".
                     db.collection("usuarios").document(usuarioExistente.getId())
                             .update("nombre", nombre, "correo", correo, "usuario", correo, "rol", rol)
                             .addOnSuccessListener(ref -> {
@@ -365,12 +380,15 @@ public class AdminPanelActivity extends AppCompatActivity {
     }
 
     private void crearTrabajadorAuth(String nombre, String correo, String passwordTemporal, String rol, AlertDialog dialog) {
+        // Se usa un FirebaseAuth secundario para crear al nuevo trabajador sin reemplazar
+        // la sesion del administrador que esta usando la app.
         FirebaseAuth secondaryAuth = getSecondaryAuth();
         if (secondaryAuth == null) {
             Toast.makeText(this, "No se pudo inicializar Firebase Auth", Toast.LENGTH_LONG).show();
             return;
         }
 
+        // Paso 1: crear la cuenta real de autenticacion con correo y password temporal.
         secondaryAuth.createUserWithEmailAndPassword(correo, passwordTemporal)
                 .addOnSuccessListener(authResult -> {
                     if (authResult.getUser() == null) {
@@ -379,10 +397,15 @@ public class AdminPanelActivity extends AppCompatActivity {
                         return;
                     }
 
+                    // El UID generado por FirebaseAuth sera la llave primaria del trabajador.
                     String uid = authResult.getUser().getUid();
+
+                    // Paso 2: crear el perfil interno en Firestore con rol y estado.
+                    // Auth sabe autenticar; Firestore sabe si es admin/mecanico y si esta activo.
                     Usuario nuevo = new Usuario(uid, nombre, correo, correo, "", rol, "activo");
                     db.collection("usuarios").document(uid).set(nuevo)
                             .addOnSuccessListener(ref -> {
+                                // Cierra la sesion secundaria para no dejar autenticado al usuario recien creado.
                                 secondaryAuth.signOut();
                                 Toast.makeText(this, "Trabajador creado", Toast.LENGTH_SHORT).show();
                                 dialog.dismiss();
@@ -401,8 +424,10 @@ public class AdminPanelActivity extends AppCompatActivity {
     private FirebaseAuth getSecondaryAuth() {
         final String secondaryAppName = "AdminUserCreation";
         try {
+            // Si la app secundaria ya fue creada antes, se reutiliza.
             return FirebaseAuth.getInstance(FirebaseApp.getInstance(secondaryAppName));
         } catch (IllegalStateException ignored) {
+            // Si no existe, se inicializa con la misma configuracion Firebase del proyecto.
             FirebaseOptions options = FirebaseOptions.fromResource(this);
             if (options == null) return null;
             FirebaseApp secondaryApp = FirebaseApp.initializeApp(this, options, secondaryAppName);
@@ -411,6 +436,7 @@ public class AdminPanelActivity extends AppCompatActivity {
     }
 
     private void mostrarOpcionesTrabajador(Usuario u, View view) {
+        // Menu contextual de cada trabajador: editar datos internos, cambiar estado o borrar perfil.
         PopupMenu popup = new PopupMenu(this, view);
         popup.getMenu().add("✏️ Editar");
         popup.getMenu().add(u.getEstado().equals("activo") ? "🚫 Suspender" : "✅ Reactivar");
@@ -420,6 +446,8 @@ public class AdminPanelActivity extends AppCompatActivity {
             String op = item.getTitle().toString();
             if (op.contains("Editar")) mostrarDialogoUsuario(u);
             else if (op.contains("Suspender") || op.contains("Reactivar")) {
+                // Suspender no borra la cuenta Auth. Solo marca el perfil como suspendido.
+                // LoginActivity revisa este campo y bloquea el acceso.
                 String nuevoEstado = u.getEstado().equals("activo") ? "suspendido" : "activo";
                 db.collection("usuarios").document(u.getId()).update("estado", nuevoEstado);
             } else if (op.contains("Eliminar")) confirmarEliminacion(u);
@@ -433,6 +461,8 @@ public class AdminPanelActivity extends AppCompatActivity {
                 .setTitle("Eliminar")
                 .setMessage("¿Eliminar a " + u.getNombre() + "?")
                 .setPositiveButton("Eliminar", (d, w) -> {
+                    // Este borrado elimina el perfil Firestore. La cuenta de FirebaseAuth puede seguir existiendo.
+                    // Si intenta entrar, LoginActivity la rechazara por no tener perfil autorizado.
                     db.collection("usuarios").document(u.getId()).delete()
                         .addOnSuccessListener(v -> Toast.makeText(this, "Eliminado correctamente", Toast.LENGTH_SHORT).show());
                 })

@@ -36,89 +36,148 @@ import java.util.List;
 
 public class ClientesActivity extends AppCompatActivity {
 
+    // TAG identifica esta pantalla cuando escribimos mensajes en Logcat.
     private static final String TAG = "ClientesActivity";
+
+    // Conexion a Firestore para leer y guardar clientes.
     private FirebaseFirestore db;
+
+    // Adapter que conecta la lista de clientes con el RecyclerView.
     private ClienteAdapter adapter;
+
+    // Lista completa: contiene todos los clientes que llegan desde Firestore.
     private List<Cliente> listaClientes = new ArrayList<>();
+
+    // Lista visible: contiene solo los clientes que pasan el filtro de busqueda.
     private List<Cliente> listaFiltrada = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Permite que la pantalla use el espacio completo del dispositivo.
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
+
+        // Carga el layout XML de la pantalla de clientes.
         setContentView(R.layout.activity_clientes);
 
+        // Vista raiz de la Activity. Se usa para aplicar padding segun barras del sistema.
         View mainView = findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
+            // Obtiene el espacio ocupado por status bar y navigation bar.
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            // Aplica ese espacio como padding para que el contenido no quede tapado.
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
+        // Inicializa Firestore. Sin esto no podemos consultar la coleccion clientes.
         db = FirebaseFirestore.getInstance();
 
+        // Separamos la preparacion de la UI en metodos para que onCreate sea facil de leer.
         setupToolbar();
         setupRecyclerView();
         setupBuscador();
 
+        // Boton flotante para crear cliente. Pasamos null porque no estamos editando uno existente.
         findViewById(R.id.fabNuevoCliente).setOnClickListener(v -> mostrarDialogoNuevoCliente(null));
 
+        // Empieza a escuchar clientes desde Firestore.
         consultarClientes();
     }
 
     private void setupToolbar() {
+        // Convierte el Toolbar del XML en la barra superior oficial de esta pantalla.
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        // Muestra la flecha de volver si la ActionBar ya fue creada correctamente.
         if (getSupportActionBar() != null) getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     }
 
     private void setupRecyclerView() {
+        // RecyclerView muestra la lista visual de clientes.
         RecyclerView rv = findViewById(R.id.rvClientes);
+
+        // LinearLayoutManager hace que la lista sea vertical.
         rv.setLayoutManager(new LinearLayoutManager(this));
+
+        // El adapter recibe la lista visible y una funcion para manejar el click en un cliente.
+        // this::mostrarDetalleCliente significa: cuando hagan click, llama a ese metodo.
         adapter = new ClienteAdapter(listaFiltrada, this::mostrarDetalleCliente);
+
+        // Une el RecyclerView con su adapter.
         rv.setAdapter(adapter);
     }
 
     private void setupBuscador() {
+        // Campo donde el usuario escribe para buscar por nombre o documento.
         TextInputEditText etBuscador = findViewById(R.id.etBuscadorClientes);
+
+        // TextWatcher escucha los cambios del texto mientras el usuario escribe.
         etBuscador.addTextChangedListener(new TextWatcher() {
+            // Antes de que cambie el texto. No necesitamos usarlo aqui.
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            // Cada vez que cambia el texto, se vuelve a filtrar la lista.
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 filtrar(s.toString());
             }
+
+            // Despues de que cambio el texto. Tampoco necesitamos usarlo aqui.
             @Override public void afterTextChanged(Editable s) {}
         });
     }
 
     private void filtrar(String texto) {
+        // Limpiamos la lista visible antes de cargar los nuevos resultados.
         listaFiltrada.clear();
+
+        // Normalizamos la busqueda: minusculas y sin espacios al inicio/final.
         String query = texto.toLowerCase().trim();
         if (query.isEmpty()) {
+            // Si el buscador esta vacio, mostramos todos los clientes.
             listaFiltrada.addAll(listaClientes);
         } else {
+            // Si hay texto, revisamos cliente por cliente.
             for (Cliente c : listaClientes) {
+                // Proteccion contra null: si Firestore trae un campo vacio, evitamos error.
                 String nombre = c.getNombre() != null ? c.getNombre().toLowerCase() : "";
                 String doc = c.getDocumento() != null ? c.getDocumento().toLowerCase() : "";
+
+                // El cliente se muestra si coincide por nombre o por documento.
                 if (nombre.contains(query) || doc.contains(query)) {
                     listaFiltrada.add(c);
                 }
             }
         }
+
+        // Avisamos al adapter que los datos cambiaron para redibujar el RecyclerView.
         adapter.notifyDataSetChanged();
     }
 
+    // Se ejecuta cuando el usuario toca la flecha de volver en el toolbar.
     @Override public boolean onSupportNavigateUp() { finish(); return true; }
 
     private void consultarClientes() {
+        // Escucha cambios en tiempo real de la coleccion clientes.
+        // Si se crea/edita un cliente, Firestore vuelve a llamar este bloque.
         db.collection("clientes").addSnapshotListener((snap, err) -> {
+            // Si hubo error al leer Firestore, salimos del metodo.
             if (err != null) return;
             if (snap != null) {
+                // Recargamos la lista completa desde cero para reflejar el estado actual.
                 listaClientes.clear();
                 for (QueryDocumentSnapshot doc : snap) {
+                    // Convierte cada documento Firestore en un objeto Cliente.
                     Cliente c = doc.toObject(Cliente.class);
+
+                    // Guarda el ID real del documento dentro del modelo.
                     c.setId(doc.getId());
                     listaClientes.add(c);
                 }
+
+                // Vuelve a aplicar el filtro. Con texto vacio, muestra todos.
                 filtrar(""); 
             }
         });
