@@ -9,7 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.PopupMenu;
 import android.widget.RadioButton;
-import android.widget.RadioGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -23,6 +23,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.company.appMancuria.adapters.ServicioAdapter;
 import com.company.appMancuria.adapters.TrabajadorAdapter;
+import com.company.appMancuria.models.EmpresaConfig;
 import com.company.appMancuria.models.Servicio;
 import com.company.appMancuria.models.Usuario;
 import com.google.android.material.textfield.TextInputEditText;
@@ -43,6 +44,8 @@ public class AdminPanelActivity extends AppCompatActivity {
 
     private static final String TAG = "AdminPanel";
     private FirebaseFirestore db;
+    private EmpresaConfig empresaConfig = new EmpresaConfig();
+    private TextView tvEmpresaPdfResumen;
     
     // Gestión de Trabajadores
     private RecyclerView rvTrabajadores;
@@ -74,6 +77,7 @@ public class AdminPanelActivity extends AppCompatActivity {
         setupRecyclers();
         setupBuscadorServicios();
         
+        consultarConfigEmpresa();
         consultarTrabajadores();
         consultarServicios();
     }
@@ -86,9 +90,11 @@ public class AdminPanelActivity extends AppCompatActivity {
     }
 
     private void bindViews() {
+        tvEmpresaPdfResumen = findViewById(R.id.tvEmpresaPdfResumen);
         rvTrabajadores = findViewById(R.id.rvTrabajadores);
         rvServicios = findViewById(R.id.rvServicios);
         
+        findViewById(R.id.btnEditarEmpresaPdf).setOnClickListener(v -> mostrarDialogoEmpresa());
         findViewById(R.id.fabNuevoUsuario).setOnClickListener(v -> mostrarDialogoUsuario(null));
         findViewById(R.id.btnNuevoServicio).setOnClickListener(v -> mostrarDialogoServicio(null));
     }
@@ -112,6 +118,82 @@ public class AdminPanelActivity extends AppCompatActivity {
             }
             @Override public void afterTextChanged(Editable s) {}
         });
+    }
+
+    private void consultarConfigEmpresa() {
+        db.collection("configuracion").document("empresa").addSnapshotListener((snap, err) -> {
+            if (err != null) return;
+            if (snap != null && snap.exists()) {
+                EmpresaConfig config = snap.toObject(EmpresaConfig.class);
+                empresaConfig = config != null ? config : new EmpresaConfig();
+            } else {
+                empresaConfig = new EmpresaConfig();
+            }
+            actualizarResumenEmpresa();
+        });
+    }
+
+    private void actualizarResumenEmpresa() {
+        if (tvEmpresaPdfResumen == null) return;
+        tvEmpresaPdfResumen.setText(
+                empresaConfig.getNombreComercial() + "\n" +
+                "RUC: " + empresaConfig.getRuc() + "\n" +
+                empresaConfig.getDireccion() + "\n" +
+                empresaConfig.getCorreo() + " | Tel: " + empresaConfig.getTelefono()
+        );
+    }
+
+    private void mostrarDialogoEmpresa() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_empresa_config, null);
+        TextInputEditText etNombre = dialogView.findViewById(R.id.etEmpresaNombre);
+        TextInputEditText etRazon = dialogView.findViewById(R.id.etEmpresaRazon);
+        TextInputEditText etRuc = dialogView.findViewById(R.id.etEmpresaRuc);
+        TextInputEditText etDireccion = dialogView.findViewById(R.id.etEmpresaDireccion);
+        TextInputEditText etTelefono = dialogView.findViewById(R.id.etEmpresaTelefono);
+        TextInputEditText etCorreo = dialogView.findViewById(R.id.etEmpresaCorreo);
+        TextInputEditText etRubro = dialogView.findViewById(R.id.etEmpresaRubro);
+        TextInputEditText etNota = dialogView.findViewById(R.id.etEmpresaNotaPdf);
+
+        etNombre.setText(empresaConfig.getNombreComercial());
+        etRazon.setText(empresaConfig.getRazonSocial());
+        etRuc.setText(empresaConfig.getRuc());
+        etDireccion.setText(empresaConfig.getDireccion());
+        etTelefono.setText(empresaConfig.getTelefono());
+        etCorreo.setText(empresaConfig.getCorreo());
+        etRubro.setText(empresaConfig.getRubro());
+        etNota.setText(empresaConfig.getNotaPdf());
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Datos para PDF")
+                .setView(dialogView)
+                .setPositiveButton("Guardar", null)
+                .setNegativeButton("Cancelar", null)
+                .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String nombre = etNombre.getText().toString().trim();
+            String ruc = etRuc.getText().toString().trim();
+            if (nombre.isEmpty()) { etNombre.setError("Obligatorio"); return; }
+            if (ruc.isEmpty()) { etRuc.setError("Obligatorio"); return; }
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("nombreComercial", nombre);
+            data.put("razonSocial", etRazon.getText().toString().trim());
+            data.put("ruc", ruc);
+            data.put("direccion", etDireccion.getText().toString().trim());
+            data.put("telefono", etTelefono.getText().toString().trim());
+            data.put("correo", etCorreo.getText().toString().trim());
+            data.put("rubro", etRubro.getText().toString().trim());
+            data.put("notaPdf", etNota.getText().toString().trim());
+
+            db.collection("configuracion").document("empresa").set(data)
+                    .addOnSuccessListener(ref -> {
+                        Toast.makeText(this, "Datos de PDF actualizados", Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                    })
+                    .addOnFailureListener(e -> Toast.makeText(this, "No se pudo guardar: " + e.getMessage(), Toast.LENGTH_LONG).show());
+        }));
+        dialog.show();
     }
 
     private void consultarServicios() {

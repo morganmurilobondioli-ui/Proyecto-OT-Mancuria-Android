@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/InputRojo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Nombre comercial"
+            android:layout_marginBottom="10dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmpresaNombre"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:inputType="textCapWords"
+                android:textColor="@color/texto_principal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/InputRojo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Razon social"
+            android:layout_marginBottom="10dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmpresaRazon"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:inputType="textCapWords"
+                android:textColor="@color/texto_principal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/InputRojo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="RUC"
+            android:layout_marginBottom="10dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmpresaRuc"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:inputType="number"
+                android:textColor="@color/texto_principal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/InputRojo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Direccion"
+            android:layout_marginBottom="10dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmpresaDireccion"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:inputType="textPostalAddress"
+                android:textColor="@color/texto_principal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/InputRojo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Telefono"
+            android:layout_marginBottom="10dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmpresaTelefono"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:inputType="phone"
+                android:textColor="@color/texto_principal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/InputRojo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Correo"
+            android:layout_marginBottom="10dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmpresaCorreo"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:inputType="textEmailAddress"
+                android:textColor="@color/texto_principal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/InputRojo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Rubro / descripcion"
+            android:layout_marginBottom="10dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmpresaRubro"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minLines="2"
+                android:gravity="top|start"
+                android:inputType="textMultiLine"
+                android:textColor="@color/texto_principal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/InputRojo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Nota del PDF">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmpresaNotaPdf"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minLines="2"
+                android:gravity="top|start"
+                android:inputType="textMultiLine"
+                android:textColor="@color/texto_principal" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

@@ -19,9 +19,11 @@ public class OrdenTrabajo {
     
     private String trabajoRealizado = "";
     private String estado = "Pendiente";
+    private double montoManoObra = 0.0;
     private double montoTotal = 0.0;
     private long   fechaIngreso = System.currentTimeMillis();
     private int    kilometraje = 0;
+    private List<PiezaUsada> piezasUsadas = new ArrayList<>();
     private List<LogEntrada> historial = new ArrayList<>();
 
     public OrdenTrabajo() {}
@@ -43,6 +45,7 @@ public class OrdenTrabajo {
         this.marcaModelo    = marcaModelo    != null ? marcaModelo    : "";
         this.fallasReportadas = normalizarFallas(fallasReportadas);
         this.estado         = "Pendiente";
+        this.montoManoObra  = montoTotal;
         this.montoTotal     = montoTotal;
         this.fechaIngreso   = System.currentTimeMillis();
         this.kilometraje    = kilometraje;
@@ -58,6 +61,34 @@ public class OrdenTrabajo {
             this.fecha = fecha;
             this.usuario = usuario;
             this.accion = accion;
+        }
+    }
+
+    public static class PiezaUsada {
+        private String nombre = "";
+        private int cantidad = 1;
+        private double precioUnitario = 0.0;
+
+        public PiezaUsada() {}
+
+        public PiezaUsada(String nombre, int cantidad, double precioUnitario) {
+            this.nombre = nombre != null ? nombre : "";
+            this.cantidad = Math.max(1, cantidad);
+            this.precioUnitario = Math.max(0.0, precioUnitario);
+        }
+
+        public String getNombre() { return nombre != null ? nombre : ""; }
+        public void setNombre(String nombre) { this.nombre = nombre; }
+
+        public int getCantidad() { return cantidad > 0 ? cantidad : 1; }
+        public void setCantidad(int cantidad) { this.cantidad = Math.max(1, cantidad); }
+
+        public double getPrecioUnitario() { return Math.max(0.0, precioUnitario); }
+        public void setPrecioUnitario(double precioUnitario) { this.precioUnitario = Math.max(0.0, precioUnitario); }
+
+        @Exclude
+        public double getSubtotal() {
+            return getCantidad() * getPrecioUnitario();
         }
     }
 
@@ -121,7 +152,19 @@ public class OrdenTrabajo {
     public String getEstado() { return estado != null ? estado : "Pendiente"; }
     public void setEstado(String e) { this.estado = e; }
 
-    public double getMontoTotal() { return montoTotal; }
+    public double getMontoManoObra() {
+        if (montoManoObra > 0) return montoManoObra;
+
+        double totalPiezas = getTotalPiezas();
+        if (montoTotal > totalPiezas) return montoTotal - totalPiezas;
+        return getPiezasUsadas().isEmpty() ? montoTotal : 0.0;
+    }
+    public void setMontoManoObra(double montoManoObra) { this.montoManoObra = Math.max(0.0, montoManoObra); }
+
+    public double getMontoTotal() {
+        double totalCalculado = getMontoManoObra() + getTotalPiezas();
+        return totalCalculado > 0 ? totalCalculado : montoTotal;
+    }
     public void setMontoTotal(double m) { this.montoTotal = m; }
 
     public long getFechaIngreso() { return fechaIngreso; }
@@ -129,6 +172,22 @@ public class OrdenTrabajo {
 
     public int getKilometraje() { return kilometraje; }
     public void setKilometraje(int k) { this.kilometraje = k; }
+
+    public List<PiezaUsada> getPiezasUsadas() {
+        return piezasUsadas != null ? piezasUsadas : new ArrayList<>();
+    }
+    public void setPiezasUsadas(List<PiezaUsada> piezasUsadas) {
+        this.piezasUsadas = piezasUsadas != null ? piezasUsadas : new ArrayList<>();
+    }
+
+    @Exclude
+    public double getTotalPiezas() {
+        double total = 0.0;
+        for (PiezaUsada pieza : getPiezasUsadas()) {
+            if (pieza != null) total += pieza.getSubtotal();
+        }
+        return total;
+    }
 
     public List<LogEntrada> getHistorial() { return historial; }
     public void setHistorial(List<LogEntrada> h) { this.historial = h; }
