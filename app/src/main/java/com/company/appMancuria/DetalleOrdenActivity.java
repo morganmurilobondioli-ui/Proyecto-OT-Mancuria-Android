@@ -34,8 +34,10 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class DetalleOrdenActivity extends AppCompatActivity {
 
@@ -222,14 +224,17 @@ public class DetalleOrdenActivity extends AppCompatActivity {
             case "Pendiente":
                 btnSiguiente.setText("INICIAR TRABAJO (En Proceso)");
                 btnSiguiente.setVisibility(View.VISIBLE);
+                btnSiguiente.setEnabled(true);
                 break;
             case "En Proceso":
                 btnSiguiente.setText("FINALIZAR TRABAJO");
                 btnSiguiente.setVisibility(View.VISIBLE);
+                btnSiguiente.setEnabled(true);
                 break;
             case "Finalizado":
                 btnSiguiente.setText("MARCAR COMO ENTREGADO");
                 btnSiguiente.setVisibility(View.VISIBLE);
+                btnSiguiente.setEnabled(true);
                 break;
             default:
                 btnSiguiente.setVisibility(View.GONE);
@@ -272,27 +277,89 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     }
 
     private void cambiarEstado(String nuevoEstado) {
+        DatosOrdenEditados datos = obtenerDatosEditados();
+        if (datos == null) return;
+
         SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
         String userName = prefs.getString("userNombre", "Usuario");
-        
-        String trabajoActual = etTrabajo.getText().toString().trim();
-        String servicioActual = etServicio.getText().toString().trim();
-        
+
         OrdenTrabajo.LogEntrada log = new OrdenTrabajo.LogEntrada(
                 SDF.format(new Date()),
                 userName,
-                "CAMBIO DE ESTADO: " + orden.getEstado() + " → " + nuevoEstado +
-                (!servicioActual.isEmpty() ? "\nServicio: " + servicioActual : "") +
-                (!trabajoActual.isEmpty() ? "\nDetalles: " + trabajoActual : "")
+                "CAMBIO DE ESTADO: " + orden.getEstado() + " -> " + nuevoEstado +
+                (!datos.servicio.isEmpty() ? "\nServicio: " + datos.servicio : "") +
+                (!datos.trabajo.isEmpty() ? "\nDetalles: " + datos.trabajo : "")
         );
 
         List<OrdenTrabajo.LogEntrada> historial = orden.getHistorial();
         if (historial == null) historial = new ArrayList<>();
         historial.add(log);
 
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("estado", nuevoEstado);
+        updates.put("fallareportada", parseServiciosDesdeTexto(datos.servicio));
+        updates.put("trabajoRealizado", datos.trabajo);
+        updates.put("kilometraje", datos.km);
+        updates.put("montoManoObra", datos.montoManoObra);
+        updates.put("piezasUsadas", copiarPiezas(piezasUsadas));
+        updates.put("montoTotal", datos.montoTotal);
+        updates.put("historial", historial);
+
+        btnSiguiente.setEnabled(false);
+        btnActualizar.setEnabled(false);
         db.collection("ordenes_trabajo").document(ordenId)
-                .update("estado", nuevoEstado, "historial", historial)
-                .addOnSuccessListener(v -> Toast.makeText(this, "Orden: " + nuevoEstado, Toast.LENGTH_SHORT).show());
+                .update(updates)
+                .addOnSuccessListener(v -> Toast.makeText(this, "Orden: " + nuevoEstado, Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> {
+                    btnSiguiente.setEnabled(true);
+                    btnActualizar.setEnabled(true);
+                    Toast.makeText(this, "Error al cambiar estado: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private DatosOrdenEditados obtenerDatosEditados() {
+        String servicio = etServicio.getText().toString().trim();
+        String trabajo = etTrabajo.getText().toString().trim();
+        String kmStr = etKm.getText().toString().trim();
+        String montoStr = etMonto.getText().toString().trim();
+
+        if (kmStr.isEmpty() || montoStr.isEmpty()) {
+            Toast.makeText(this, "Complete todos los campos tecnicos", Toast.LENGTH_SHORT).show();
+            return null;
+        }
+
+        int km;
+        try {
+            km = Integer.parseInt(kmStr);
+        } catch (Exception e) {
+            etKm.setError("Kilometraje invalido");
+            return null;
+        }
+
+        if (km < orden.getKilometraje()) {
+            Toast.makeText(this, "El kilometraje no puede ser menor al registrado anteriormente (" + orden.getKilometraje() + " km)", Toast.LENGTH_LONG).show();
+            return null;
+        }
+
+        double montoManoObra = parseMonto(montoStr);
+        double montoTotal = montoManoObra + calcularTotalPiezas();
+        return new DatosOrdenEditados(servicio, trabajo, km, montoManoObra, montoTotal);
+    }
+
+    private static class DatosOrdenEditados {
+        final String servicio;
+        final String trabajo;
+        final int km;
+        final double montoManoObra;
+        final double montoTotal;
+
+        DatosOrdenEditados(String servicio, String trabajo, int km, double montoManoObra, double montoTotal) {
+            this.servicio = servicio;
+            this.trabajo = trabajo;
+            this.km = km;
+            this.montoManoObra = montoManoObra;
+            this.montoTotal = montoTotal;
+        }
     }
 
     private void actualizarDatos() {
