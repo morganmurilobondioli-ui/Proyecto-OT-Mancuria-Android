@@ -11,6 +11,9 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,11 +31,14 @@ import com.company.appMancuria.models.OrdenTrabajo;
 import com.company.appMancuria.utils.OtPdfGenerator;
 import com.company.appMancuria.utils.OtPdfGenerator.PdfResult;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -46,11 +52,15 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     private EmpresaConfig empresaConfig = new EmpresaConfig();
     private String ordenId;
     private final List<OrdenTrabajo.PiezaUsada> piezasUsadas = new ArrayList<>();
+    private final List<String> listaNombresServicios = new ArrayList<>();
+    private final List<String> serviciosSeleccionados = new ArrayList<>();
     private boolean cargandoDatos = false;
 
     private TextView tvPlaca, tvCliente, tvEstado, tvFecha, tvHistorial, tvTotalPiezas, tvTotalFinal;
-    private TextInputEditText etServicio, etTrabajo, etKm, etMonto;
-    private LinearLayout llPiezasUsadas;
+    private AutoCompleteTextView actvServicio;
+    private TextInputEditText etTrabajo, etKm, etMonto;
+    private ArrayAdapter<String> adapterServicios;
+    private LinearLayout llPiezasUsadas, llServiciosSeleccionados;
     private MaterialButton btnSiguiente, btnActualizar, btnAgregarPieza, btnDescargarPdf;
 
     private static final SimpleDateFormat SDF = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
@@ -79,6 +89,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         setupToolbar();
         bindViews();
         setupChangeDetection();
+        cargarCatalogoServicios();
         cargarConfigEmpresa();
         cargarDatosOrden();
     }
@@ -101,11 +112,22 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         tvTotalPiezas = findViewById(R.id.tvTotalPiezas);
         tvTotalFinal = findViewById(R.id.tvTotalFinal);
         llPiezasUsadas = findViewById(R.id.llPiezasUsadas);
+        llServiciosSeleccionados = findViewById(R.id.llDetalleServiciosSeleccionados);
 
-        etServicio = findViewById(R.id.etDetalleServicio);
+        actvServicio = findViewById(R.id.actvDetalleServicio);
         etTrabajo = findViewById(R.id.etDetalleTrabajo);
         etKm = findViewById(R.id.etDetalleKm);
         etMonto = findViewById(R.id.etDetalleMonto);
+        adapterServicios = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, listaNombresServicios);
+        actvServicio.setAdapter(adapterServicios);
+        actvServicio.setOnClickListener(v -> {
+            if (actvServicio.isEnabled()) actvServicio.showDropDown();
+        });
+        actvServicio.setOnItemClickListener((parent, view, position, id) -> {
+            String servicio = (String) parent.getItemAtPosition(position);
+            agregarServicioAChips(servicio);
+            actvServicio.setText("");
+        });
 
         btnSiguiente = findViewById(R.id.btnSiguienteEstado);
         btnActualizar = findViewById(R.id.btnActualizarDatos);
@@ -129,16 +151,81 @@ public class DetalleOrdenActivity extends AppCompatActivity {
                 verificarCambios();
             }
         };
-        etServicio.addTextChangedListener(watcher);
         etTrabajo.addTextChangedListener(watcher);
         etKm.addTextChangedListener(watcher);
         etMonto.addTextChangedListener(watcher);
     }
 
+    private void cargarCatalogoServicios() {
+        db.collection("servicios").addSnapshotListener((value, error) -> {
+            if (error != null || value == null) return;
+            listaNombresServicios.clear();
+            for (QueryDocumentSnapshot doc : value) {
+                String nombre = doc.getString("nombre");
+                if (nombre != null) listaNombresServicios.add(nombre);
+            }
+            Collections.sort(listaNombresServicios, String::compareToIgnoreCase);
+            adapterServicios.notifyDataSetChanged();
+        });
+    }
+
+    private void agregarServicioAChips(String servicio) {
+        agregarServicioAChips(servicio, true);
+    }
+
+    private void agregarServicioAChips(String servicio, boolean verificar) {
+        if (servicio == null || servicio.trim().isEmpty()) return;
+        String servicioLimpio = servicio.trim();
+        if (serviciosSeleccionados.contains(servicioLimpio)) {
+            if (verificar) Toast.makeText(this, "Servicio ya seleccionado", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        serviciosSeleccionados.add(servicioLimpio);
+
+        boolean esEditable = orden == null || !"Entregado".equals(orden.getEstado());
+        Chip chip = new Chip(this);
+        chip.setText(servicioLimpio);
+        chip.setCloseIconVisible(esEditable);
+        chip.setTextColor(Color.BLACK);
+        chip.setCloseIconTint(ColorStateList.valueOf(Color.BLACK));
+        chip.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor("#E0E0E0")));
+
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, 4, 0, 4);
+        chip.setLayoutParams(params);
+
+        chip.setOnCloseIconClickListener(v -> {
+            if (!esEditable) return;
+            llServiciosSeleccionados.removeView(chip);
+            serviciosSeleccionados.remove(servicioLimpio);
+            verificarCambios();
+        });
+
+        llServiciosSeleccionados.addView(chip);
+        if (verificar) verificarCambios();
+    }
+
+    private void renderServiciosSeleccionados(List<String> servicios) {
+        serviciosSeleccionados.clear();
+        llServiciosSeleccionados.removeAllViews();
+        if (servicios == null) return;
+        for (String servicio : servicios) {
+            agregarServicioAChips(servicio, false);
+        }
+    }
+
+    private String serviciosComoTexto() {
+        return String.join("\n", serviciosSeleccionados);
+    }
+
     private void verificarCambios() {
         if (orden == null || cargandoDatos) return;
 
-        String currentServicio = etServicio.getText().toString().trim();
+        String currentServicio = serviciosComoTexto();
         String currentTrabajo = etTrabajo.getText().toString().trim();
         String currentKmStr = etKm.getText().toString().trim();
         String currentMontoStr = etMonto.getText().toString().trim();
@@ -177,7 +264,8 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         tvEstado.setText(orden.getEstado().toUpperCase());
         tvFecha.setText(SDF.format(new Date(orden.getFechaIngreso())));
 
-        if (!etServicio.hasFocus()) etServicio.setText(orden.getFallaReportada());
+        renderServiciosSeleccionados(orden.getFallasReportadas());
+        actvServicio.setText("");
         if (!etTrabajo.hasFocus()) etTrabajo.setText(orden.getTrabajoRealizado());
         if (!etKm.hasFocus()) etKm.setText(String.valueOf(orden.getKilometraje()));
         if (!etMonto.hasFocus()) etMonto.setText(formatMontoInput(orden.getMontoManoObra()));
@@ -197,7 +285,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         tvEstado.setBackgroundTintList(ColorStateList.valueOf(color));
 
         boolean esEditable = !"Entregado".equals(orden.getEstado());
-        etServicio.setEnabled(esEditable);
+        actvServicio.setEnabled(esEditable);
         etTrabajo.setEnabled(esEditable);
         etKm.setEnabled(esEditable);
         etMonto.setEnabled(esEditable);
@@ -247,8 +335,8 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         switch (orden.getEstado()) {
             case "Pendiente": proximoEstado = "En Proceso"; break;
             case "En Proceso": 
-                if (etServicio.getText().toString().trim().isEmpty()) {
-                    Toast.makeText(this, "Debe ingresar el tipo de servicio", Toast.LENGTH_LONG).show();
+                if (serviciosSeleccionados.isEmpty()) {
+                    Toast.makeText(this, "Debe seleccionar al menos un servicio", Toast.LENGTH_LONG).show();
                     return;
                 }
                 proximoEstado = "Finalizado"; 
@@ -297,7 +385,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
 
         Map<String, Object> updates = new HashMap<>();
         updates.put("estado", nuevoEstado);
-        updates.put("fallareportada", parseServiciosDesdeTexto(datos.servicio));
+        updates.put("fallareportada", new ArrayList<>(serviciosSeleccionados));
         updates.put("trabajoRealizado", datos.trabajo);
         updates.put("kilometraje", datos.km);
         updates.put("montoManoObra", datos.montoManoObra);
@@ -318,7 +406,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     }
 
     private DatosOrdenEditados obtenerDatosEditados() {
-        String servicio = etServicio.getText().toString().trim();
+        String servicio = serviciosComoTexto();
         String trabajo = etTrabajo.getText().toString().trim();
         String kmStr = etKm.getText().toString().trim();
         String montoStr = etMonto.getText().toString().trim();
@@ -363,7 +451,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     }
 
     private void actualizarDatos() {
-        String servicio = etServicio.getText().toString().trim();
+        String servicio = serviciosComoTexto();
         String trabajo = etTrabajo.getText().toString().trim();
         String kmStr = etKm.getText().toString().trim();
         String montoStr = etMonto.getText().toString().trim();
@@ -406,7 +494,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         btnActualizar.setEnabled(false);
         
         db.collection("ordenes_trabajo").document(ordenId)
-                .update("fallareportada", parseServiciosDesdeTexto(servicio),
+                .update("fallareportada", new ArrayList<>(serviciosSeleccionados),
                         "trabajoRealizado", trabajo, 
                         "kilometraje", km, 
                         "montoManoObra", montoManoObra,
@@ -669,16 +757,4 @@ public class DetalleOrdenActivity extends AppCompatActivity {
         }
     }
 
-    private List<String> parseServiciosDesdeTexto(String texto) {
-        List<String> servicios = new ArrayList<>();
-        if (texto == null || texto.trim().isEmpty()) return servicios;
-
-        for (String item : texto.split("\\r?\\n")) {
-            String servicio = item.trim();
-            if (!servicio.isEmpty() && !servicios.contains(servicio)) {
-                servicios.add(servicio);
-            }
-        }
-        return servicios;
-    }
 }
