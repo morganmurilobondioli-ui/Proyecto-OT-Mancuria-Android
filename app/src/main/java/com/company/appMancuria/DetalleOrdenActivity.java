@@ -1,6 +1,7 @@
 package com.company.appMancuria;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -25,6 +26,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.company.appMancuria.models.EmpresaConfig;
 import com.company.appMancuria.models.OrdenTrabajo;
 import com.company.appMancuria.utils.OtPdfGenerator;
+import com.company.appMancuria.utils.OtPdfGenerator.PdfResult;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -42,6 +44,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     private EmpresaConfig empresaConfig = new EmpresaConfig();
     private String ordenId;
     private final List<OrdenTrabajo.PiezaUsada> piezasUsadas = new ArrayList<>();
+    private boolean cargandoDatos = false;
 
     private TextView tvPlaca, tvCliente, tvEstado, tvFecha, tvHistorial, tvTotalPiezas, tvTotalFinal;
     private TextInputEditText etServicio, etTrabajo, etKm, etMonto;
@@ -131,7 +134,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     }
 
     private void verificarCambios() {
-        if (orden == null) return;
+        if (orden == null || cargandoDatos) return;
 
         String currentServicio = etServicio.getText().toString().trim();
         String currentTrabajo = etTrabajo.getText().toString().trim();
@@ -166,6 +169,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
     }
 
     private void mostrarDatos() {
+        cargandoDatos = true;
         tvPlaca.setText(orden.getPlaca());
         tvCliente.setText(orden.getClienteNombre());
         tvEstado.setText(orden.getEstado().toUpperCase());
@@ -210,6 +214,7 @@ public class DetalleOrdenActivity extends AppCompatActivity {
             }
         }
         tvHistorial.setText(sb.length() > 0 ? sb.toString() : "No hay registros de actividad...");
+        cargandoDatos = false;
     }
 
     private void actualizarTextoBotonSiguiente() {
@@ -554,12 +559,46 @@ public class DetalleOrdenActivity extends AppCompatActivity {
 
         btnDescargarPdf.setEnabled(false);
         try {
-            Uri uri = OtPdfGenerator.generate(this, orden, empresaConfig);
-            Toast.makeText(this, "PDF guardado en Descargas/Mancuria", Toast.LENGTH_LONG).show();
+            PdfResult result = OtPdfGenerator.generate(this, orden, empresaConfig);
+            mostrarPdfGenerado(result);
         } catch (Exception e) {
             Toast.makeText(this, "No se pudo generar el PDF: " + e.getMessage(), Toast.LENGTH_LONG).show();
         } finally {
             btnDescargarPdf.setEnabled(true);
+        }
+    }
+
+    private void mostrarPdfGenerado(PdfResult result) {
+        new AlertDialog.Builder(this)
+                .setTitle("PDF descargado")
+                .setMessage("Archivo: " + result.getFileName() + "\nUbicacion: " + result.getDisplayPath())
+                .setPositiveButton("Abrir PDF", (dialog, which) -> abrirPdf(result.getUri()))
+                .setNegativeButton("Compartir", (dialog, which) -> compartirPdf(result))
+                .setNeutralButton("Cerrar", null)
+                .show();
+    }
+
+    private void abrirPdf(Uri uri) {
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(uri, "application/pdf");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivity(Intent.createChooser(intent, "Abrir PDF"));
+        } catch (Exception e) {
+            Toast.makeText(this, "No hay una app disponible para abrir PDF", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void compartirPdf(PdfResult result) {
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("application/pdf");
+        intent.putExtra(Intent.EXTRA_STREAM, result.getUri());
+        intent.putExtra(Intent.EXTRA_SUBJECT, result.getFileName());
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivity(Intent.createChooser(intent, "Compartir PDF"));
+        } catch (Exception e) {
+            Toast.makeText(this, "No hay una app disponible para compartir PDF", Toast.LENGTH_LONG).show();
         }
     }
 

@@ -55,12 +55,12 @@ public class OtPdfGenerator {
         money.setMaximumFractionDigits(2);
     }
 
-    public static Uri generate(Context context, OrdenTrabajo orden, EmpresaConfig empresa) throws Exception {
+    public static PdfResult generate(Context context, OrdenTrabajo orden, EmpresaConfig empresa) throws Exception {
         OtPdfGenerator generator = new OtPdfGenerator(context);
         return generator.create(orden, empresa);
     }
 
-    private Uri create(OrdenTrabajo orden, EmpresaConfig empresa) throws Exception {
+    private PdfResult create(OrdenTrabajo orden, EmpresaConfig empresa) throws Exception {
         startPage();
         drawHeader(empresa, orden);
         drawVehicleSummary(orden);
@@ -73,7 +73,23 @@ public class OtPdfGenerator {
         String fileName = "OT_" + cleanFilePart(orden.getPlaca()) + "_" + cleanFilePart(orden.getId()) + ".pdf";
         Uri uri = writeToDownloads(fileName);
         document.close();
-        return uri;
+        return new PdfResult(uri, fileName, "Descargas/Mancuria/" + fileName);
+    }
+
+    public static class PdfResult {
+        private final Uri uri;
+        private final String fileName;
+        private final String displayPath;
+
+        PdfResult(Uri uri, String fileName, String displayPath) {
+            this.uri = uri;
+            this.fileName = fileName;
+            this.displayPath = displayPath;
+        }
+
+        public Uri getUri() { return uri; }
+        public String getFileName() { return fileName; }
+        public String getDisplayPath() { return displayPath; }
     }
 
     private void startPage() {
@@ -195,7 +211,6 @@ public class OtPdfGenerator {
     }
 
     private void drawFooter(EmpresaConfig empresa) {
-        ensureSpace(72);
         drawLine(MARGIN, PAGE_HEIGHT - 82, PAGE_WIDTH - MARGIN, RED);
         drawWrappedText(empresa.getNotaPdf(), MARGIN, PAGE_HEIGHT - 66, PAGE_WIDTH - (MARGIN * 2), 9, MUTED, false, 11);
         drawText(empresa.getDireccion(), MARGIN, PAGE_HEIGHT - 34, 9, MUTED, false);
@@ -303,11 +318,16 @@ public class OtPdfGenerator {
             values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
             values.put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
             values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Mancuria");
+            values.put(MediaStore.MediaColumns.IS_PENDING, 1);
             Uri uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
             if (uri == null) throw new IllegalStateException("No se pudo crear el archivo PDF");
             try (OutputStream os = resolver.openOutputStream(uri)) {
+                if (os == null) throw new IllegalStateException("No se pudo abrir el archivo PDF");
                 document.writeTo(os);
             }
+            ContentValues published = new ContentValues();
+            published.put(MediaStore.MediaColumns.IS_PENDING, 0);
+            resolver.update(uri, published, null, null);
             return uri;
         }
 
