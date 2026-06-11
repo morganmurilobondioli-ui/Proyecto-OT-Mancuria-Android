@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.view.animation.AnimationUtils;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,6 +28,7 @@ public class LoginActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private TextInputEditText etUsuario, etPassword;
     private MaterialButton btnIngresar;
+    private TextView tvForgotPassword;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,9 +70,13 @@ public class LoginActivity extends AppCompatActivity {
         etUsuario = findViewById(R.id.etUserLogin);
         etPassword = findViewById(R.id.etPasswordLogin);
         btnIngresar = findViewById(R.id.btnLogin);
+        tvForgotPassword = findViewById(R.id.tvForgotPassword);
 
         if (btnIngresar != null) {
             btnIngresar.setOnClickListener(v -> intentarLoginInterno());
+        }
+        if (tvForgotPassword != null) {
+            tvForgotPassword.setOnClickListener(v -> enviarRecuperacionPassword());
         }
 
         findViewById(android.R.id.content)
@@ -92,6 +98,31 @@ public class LoginActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     btnIngresar.setEnabled(true);
                     Toast.makeText(this, "Credenciales incorrectas", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void enviarRecuperacionPassword() {
+        String email = etUsuario.getText().toString().trim();
+        if (email.isEmpty()) {
+            etUsuario.setError("Ingresa tu correo");
+            etUsuario.requestFocus();
+            Toast.makeText(this, "Escribe tu correo para recuperar la contraseña", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        tvForgotPassword.setEnabled(false);
+        mAuth.sendPasswordResetEmail(email)
+                .addOnSuccessListener(unused -> {
+                    tvForgotPassword.setEnabled(true);
+                    Toast.makeText(
+                            this,
+                            "Te enviamos un correo para restablecer tu contraseña. Revisa también spam o correo no deseado.",
+                            Toast.LENGTH_LONG
+                    ).show();
+                })
+                .addOnFailureListener(e -> {
+                    tvForgotPassword.setEnabled(true);
+                    Toast.makeText(this, "No se pudo enviar el correo de recuperación", Toast.LENGTH_LONG).show();
                 });
     }
 
