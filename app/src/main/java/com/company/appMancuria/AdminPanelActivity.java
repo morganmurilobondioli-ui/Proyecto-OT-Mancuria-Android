@@ -26,6 +26,9 @@ import com.company.appMancuria.adapters.TrabajadorAdapter;
 import com.company.appMancuria.models.Servicio;
 import com.company.appMancuria.models.Usuario;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -231,14 +234,15 @@ public class AdminPanelActivity extends AppCompatActivity {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_usuario, null);
         TextInputEditText etNombre = dialogView.findViewById(R.id.etNombreUsuario);
         TextInputEditText etCorreo = dialogView.findViewById(R.id.etUserLogin);
-        TextInputEditText etUid = dialogView.findViewById(R.id.etPasswordUsuario);
+        TextInputEditText etPasswordTemporal = dialogView.findViewById(R.id.etPasswordUsuario);
         RadioButton rbAdmin = dialogView.findViewById(R.id.rbAdmin);
 
         if (usuarioExistente != null) {
             etNombre.setText(usuarioExistente.getNombre());
             etCorreo.setText(usuarioExistente.getCorreo());
-            etUid.setText(usuarioExistente.getId());
-            etUid.setEnabled(false);
+            etPasswordTemporal.setText("");
+            etPasswordTemporal.setHint("No se edita desde la app");
+            etPasswordTemporal.setEnabled(false);
             if ("admin".equals(usuarioExistente.getRol())) rbAdmin.setChecked(true);
         }
 
@@ -253,19 +257,18 @@ public class AdminPanelActivity extends AppCompatActivity {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
                 String nombre = etNombre.getText().toString().trim();
                 String correo = etCorreo.getText().toString().trim();
-                String uid = etUid.getText().toString().trim();
+                String passwordTemporal = etPasswordTemporal.getText().toString().trim();
                 String rol    = rbAdmin.isChecked() ? "admin" : "mecanico";
 
                 if (nombre.isEmpty()) { etNombre.setError("Obligatorio"); return; }
                 if (correo.isEmpty()) { etCorreo.setError("Obligatorio"); return; }
-                if (uid.isEmpty()) { etUid.setError("UID requerido"); return; }
 
                 if (usuarioExistente == null) {
-                    Usuario nuevo = new Usuario(uid, nombre, correo, correo, "", rol, "activo");
-                    db.collection("usuarios").document(uid).set(nuevo).addOnSuccessListener(ref -> {
-                        Toast.makeText(this, "Trabajador creado", Toast.LENGTH_SHORT).show();
-                        dialog.dismiss();
-                    });
+                    if (passwordTemporal.length() < 6) {
+                        etPasswordTemporal.setError("Minimo 6 caracteres");
+                        return;
+                    }
+                    crearTrabajadorAuth(nombre, correo, passwordTemporal, rol, dialog);
                 } else {
                     db.collection("usuarios").document(usuarioExistente.getId())
                             .update("nombre", nombre, "correo", correo, "usuario", correo, "rol", rol)
@@ -277,6 +280,52 @@ public class AdminPanelActivity extends AppCompatActivity {
             });
         });
         dialog.show();
+    }
+
+    private void crearTrabajadorAuth(String nombre, String correo, String passwordTemporal, String rol, AlertDialog dialog) {
+        FirebaseAuth secondaryAuth = getSecondaryAuth();
+        if (secondaryAuth == null) {
+            Toast.makeText(this, "No se pudo inicializar Firebase Auth", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        secondaryAuth.createUserWithEmailAndPassword(correo, passwordTemporal)
+                .addOnSuccessListener(authResult -> {
+                    if (authResult.getUser() == null) {
+                        secondaryAuth.signOut();
+                        Toast.makeText(this, "No se pudo obtener el UID creado", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    String uid = authResult.getUser().getUid();
+                    Usuario nuevo = new Usuario(uid, nombre, correo, correo, "", rol, "activo");
+                    db.collection("usuarios").document(uid).set(nuevo)
+                            .addOnSuccessListener(ref -> {
+                                secondaryAuth.signOut();
+                                Toast.makeText(this, "Trabajador creado", Toast.LENGTH_SHORT).show();
+                                dialog.dismiss();
+                            })
+                            .addOnFailureListener(e -> {
+                                secondaryAuth.signOut();
+                                Toast.makeText(this, "Auth creado, pero fallo el perfil: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    secondaryAuth.signOut();
+                    Toast.makeText(this, "No se pudo crear el trabajador: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private FirebaseAuth getSecondaryAuth() {
+        final String secondaryAppName = "AdminUserCreation";
+        try {
+            return FirebaseAuth.getInstance(FirebaseApp.getInstance(secondaryAppName));
+        } catch (IllegalStateException ignored) {
+            FirebaseOptions options = FirebaseOptions.fromResource(this);
+            if (options == null) return null;
+            FirebaseApp secondaryApp = FirebaseApp.initializeApp(this, options, secondaryAppName);
+            return FirebaseAuth.getInstance(secondaryApp);
+        }
     }
 
     private void mostrarOpcionesTrabajador(Usuario u, View view) {

@@ -50,7 +50,7 @@
         style="@style/InputRojo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="UID de Firebase Auth"
+        android:hint="Contraseña temporal"
         app:boxBackgroundColor="#FFFFFF"
         android:layout_marginBottom="18dp">
         <com.google.android.material.textfield.TextInputEditText
@@ -58,7 +58,7 @@
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:textColor="#212121"
-            android:inputType="text"/>
+            android:inputType="textPassword"/>
     </com.google.android.material.textfield.TextInputLayout>
 
     <TextView

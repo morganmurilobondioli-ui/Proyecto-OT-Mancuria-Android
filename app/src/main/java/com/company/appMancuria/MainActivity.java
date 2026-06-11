@@ -10,6 +10,7 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -45,6 +46,8 @@ public class MainActivity extends AppCompatActivity {
     private String userRol = "mecanico";
     private ImageButton btnAdminPanel;
     private String currentUserId;
+    private ImageView ivUserPhoto;
+    private TextView tvUserName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,21 +88,32 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(this, ClientesActivity.class)));
 
         // Botón Admin Panel
-        btnAdminPanel.setOnClickListener(v ->
-                startActivity(new Intent(this, AdminPanelActivity.class)));
+        btnAdminPanel.setOnClickListener(this::mostrarMenuUsuario);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (tvUserName == null || ivUserPhoto == null) return;
+
+        SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
+        tvUserName.setText(prefs.getString("userNombre", "Usuario"));
+        cargarFotoUsuario(prefs.getString("userFotoUrl", ""));
     }
 
     private void setupTopBar() {
-        ImageView ivPhoto = findViewById(R.id.ivUserPhoto);
-        TextView tvName   = findViewById(R.id.tvUserName);
+        ivUserPhoto = findViewById(R.id.ivUserPhoto);
+        tvUserName = findViewById(R.id.tvUserName);
         ImageButton btnLogout = findViewById(R.id.btnLogout);
 
         SharedPreferences prefs = getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE);
         String nombre = prefs.getString("userNombre", "Usuario");
-        tvName.setText(nombre);
+        String fotoUrl = prefs.getString("userFotoUrl", "");
+        tvUserName.setText(nombre);
         
         // La foto ahora es opcional o estática si no viene de Google
-        Glide.with(this).load(R.mipmap.ic_launcher_round).circleCrop().into(ivPhoto);
+        cargarFotoUsuario(fotoUrl);
+        ivUserPhoto.setOnClickListener(this::mostrarMenuUsuario);
 
         btnLogout.setOnClickListener(v ->
             new AlertDialog.Builder(this)
@@ -110,6 +124,46 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("Cancelar", null).show()
         );
+    }
+
+    private void cargarFotoUsuario(String fotoUrl) {
+        Object source = (fotoUrl == null || fotoUrl.isEmpty()) ? R.mipmap.ic_launcher_round : fotoUrl;
+        Glide.with(this)
+                .load(source)
+                .circleCrop()
+                .placeholder(R.mipmap.ic_launcher_round)
+                .into(ivUserPhoto);
+    }
+
+    private void mostrarMenuUsuario(View anchor) {
+        PopupMenu popup = new PopupMenu(this, anchor);
+        popup.getMenu().add("Mi perfil");
+        if ("admin".equals(userRol)) {
+            popup.getMenu().add("Administracion");
+        }
+        popup.getMenu().add("Cerrar sesion");
+
+        popup.setOnMenuItemClickListener(item -> {
+            String opcion = item.getTitle().toString();
+            if (opcion.equals("Mi perfil")) {
+                startActivity(new Intent(this, PerfilActivity.class));
+            } else if (opcion.equals("Administracion")) {
+                startActivity(new Intent(this, AdminPanelActivity.class));
+            } else if (opcion.equals("Cerrar sesion")) {
+                confirmarCierreSesion();
+            }
+            return true;
+        });
+        popup.show();
+    }
+
+    private void confirmarCierreSesion() {
+        new AlertDialog.Builder(this)
+                .setTitle("Cerrar sesion")
+                .setMessage("Deseas salir de Mancuria?")
+                .setPositiveButton("Salir", (d, w) -> cerrarSesion())
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private void cerrarSesion() {
@@ -194,11 +248,18 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
                         
-                        if (userRol.equals("admin")) {
-                            btnAdminPanel.setVisibility(View.VISIBLE);
-                        } else {
-                            btnAdminPanel.setVisibility(View.GONE);
-                        }
+                        String nombre = doc.getString("nombre");
+                        String fotoUrl = doc.getString("fotoUrl");
+                        if (nombre == null || nombre.isEmpty()) nombre = "Usuario";
+                        if (fotoUrl == null) fotoUrl = "";
+
+                        getSharedPreferences("MancuriaPrefs", Context.MODE_PRIVATE).edit()
+                                .putString("userNombre", nombre)
+                                .putString("userFotoUrl", fotoUrl)
+                                .putString("userRol", userRol)
+                                .apply();
+                        tvUserName.setText(nombre);
+                        cargarFotoUsuario(fotoUrl);
                         
                         consultarOrdenes();
                     }
