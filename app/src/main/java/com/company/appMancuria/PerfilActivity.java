@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -137,13 +138,23 @@ public class PerfilActivity extends AppCompatActivity {
     }
 
     private void scrollToSaveButton() {
-        scrollPerfil.postDelayed(this::scrollToFormBottom, 300);
-        scrollPerfil.postDelayed(this::scrollToFormBottom, 650);
+        scrollPerfil.postDelayed(this::ensureSaveButtonVisible, 300);
+        scrollPerfil.postDelayed(this::ensureSaveButtonVisible, 650);
     }
 
-    private void scrollToFormBottom() {
-        if (scrollPerfil.getChildCount() == 0) return;
-        scrollPerfil.smoothScrollTo(0, scrollPerfil.getChildAt(0).getBottom());
+    private void ensureSaveButtonVisible() {
+        Rect visibleFrame = new Rect();
+        getWindow().getDecorView().getWindowVisibleDisplayFrame(visibleFrame);
+
+        int[] buttonLocation = new int[2];
+        btnGuardar.getLocationOnScreen(buttonLocation);
+
+        int buttonBottom = buttonLocation[1] + btnGuardar.getHeight();
+        int requiredScroll = buttonBottom - visibleFrame.bottom + 32;
+
+        if (requiredScroll > 0) {
+            scrollPerfil.smoothScrollBy(0, requiredScroll);
+        }
     }
 
     private void cargarPerfil() {
