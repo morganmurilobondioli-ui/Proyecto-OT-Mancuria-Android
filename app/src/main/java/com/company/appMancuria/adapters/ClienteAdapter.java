@@ -18,20 +18,21 @@ public class ClienteAdapter extends RecyclerView.Adapter<ClienteAdapter.ViewHold
 
     public interface OnItemClickListener { void onItemClick(Cliente cliente); } //un contrato donde escuchamos al item
     //recibimos un objeto cliente como parametro
-    private final List<Cliente> lista;
-    private final OnItemClickListener listener;
+    private final List<Cliente> lista; //es una lista donde cada elemento debe ser un objeto cliente
+    private final OnItemClickListener listener; //el avisador del click
 
     public ClienteAdapter(List<Cliente> lista, OnItemClickListener listener) {
         this.lista    = lista;
         this.listener = listener;
-    }
+    } //Constructor que recibe datos y el comportamiento que necesita el adapter
 
+    //el meto do no puede devolver nulo
     @NonNull @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_cliente, parent, false);
+                .inflate(R.layout.item_cliente, parent, false); //parent es el contenedor donde irá esa fila
         return new ViewHolder(v);
-    }
+    }//Crear la tarjeta vacía
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder h, int pos) {
@@ -49,7 +50,7 @@ public class ClienteAdapter extends RecyclerView.Adapter<ClienteAdapter.ViewHold
         h.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onItemClick(c);
         });
-    }
+    }//escribir encima los datos del cliente
 
     @Override public int getItemCount() { return lista.size(); }
 

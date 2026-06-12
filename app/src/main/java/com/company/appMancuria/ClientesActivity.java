@@ -53,7 +53,6 @@ public class ClientesActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Permite que la pantalla use el espacio completo del dispositivo.
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
 
